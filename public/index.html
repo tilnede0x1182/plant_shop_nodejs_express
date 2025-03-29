@@ -11,9 +11,20 @@
   <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
 </head>
 <body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-success">
+    <div class="container">
+      <a class="navbar-brand" href="/" onclick="event.preventDefault(); navigate('/')">Plant Shop</a>
+    </div>
+  </nav>
+
   <div class="container py-4">
     <div id="root"></div>
   </div>
+
+  <footer class="bg-light text-center py-3 border-top mt-4">
+    <small>&copy; 2025 Plant Shop. Tous droits réservés.</small>
+  </footer>
+
   <script type="text/babel" src="script.js"></script>
 </body>
 </html>

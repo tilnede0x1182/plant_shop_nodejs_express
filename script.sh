@@ -17,9 +17,20 @@ cat > public/index.html <<'EOF'
   <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
 </head>
 <body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-success">
+    <div class="container">
+      <a class="navbar-brand" href="/" onclick="event.preventDefault(); navigate('/')">Plant Shop</a>
+    </div>
+  </nav>
+
   <div class="container py-4">
     <div id="root"></div>
   </div>
+
+  <footer class="bg-light text-center py-3 border-top mt-4">
+    <small>&copy; 2025 Plant Shop. Tous droits réservés.</small>
+  </footer>
+
   <script type="text/babel" src="script.js"></script>
 </body>
 </html>
@@ -46,6 +57,12 @@ function navigate(path) {
   renderRoute()
 }
 
+function supprimerPlante(id) {
+  if (!confirm("Supprimer cette plante ?")) return
+  fetch("/api/plantes/" + id, { method: "DELETE" })
+    .then(() => window.location.pathname === "/" ? window.location.reload() : navigate("/"))
+}
+
 // Page d'accueil
 function PageAccueil() {
   const [plantes, setPlantes] = useState([])
@@ -60,9 +77,12 @@ function PageAccueil() {
       <div className="row">
         {plantes.map(p => (
           <div className="col-md-4 mb-3" key={p.id}>
-            <div className="card p-3" onClick={() => navigate("/plante/" + p.id)}>
-              <h5>{p.nom}</h5>
-              <p>{p.prix} € – {p.categorie}</p>
+            <div className="card p-3">
+              <div onClick={() => navigate("/plante/" + p.id)}>
+                <h5>{p.nom}</h5>
+                <p>{p.prix} € – {p.categorie}</p>
+              </div>
+              <button className="btn btn-sm btn-outline-danger mt-2" onClick={() => supprimerPlante(p.id)}>Supprimer</button>
             </div>
           </div>
         ))}
@@ -83,12 +103,13 @@ function PageShow({ id }) {
 
   return (
     <div>
-      <h2>{plante.nom}</h2>
-      <p>{plante.description}</p>
+      <h2 className="mb-3">{plante.nom}</h2>
+      <p><strong>Description :</strong> {plante.description}</p>
       <p><strong>Prix :</strong> {plante.prix} €</p>
       <p><strong>Catégorie :</strong> {plante.categorie}</p>
       <p><strong>Stock :</strong> {plante.stock}</p>
       <button className="btn btn-primary me-2" onClick={() => navigate("/modifier/" + plante.id)}>Modifier</button>
+      <button className="btn btn-danger me-2" onClick={() => supprimerPlante(plante.id)}>Supprimer</button>
       <button className="btn btn-secondary" onClick={() => navigate("/")}>Retour</button>
     </div>
   )
@@ -119,7 +140,7 @@ function PageModifier({ id }) {
 
   return (
     <div>
-      <h2>Modifier {form.nom}</h2>
+      <h2 className="mb-3">Modifier {form.nom}</h2>
       <form onSubmit={handleSubmit}>
         <input className="form-control mb-2" name="nom" value={form.nom} onChange={handleChange} required />
         <input className="form-control mb-2" name="description" value={form.description} onChange={handleChange} />
@@ -133,7 +154,7 @@ function PageModifier({ id }) {
   )
 }
 
-// ROUTEUR MAISON
+// ROUTEUR
 function renderRoute() {
   const path = window.location.pathname
   const root = document.getElementById("root")
@@ -155,4 +176,4 @@ window.onpopstate = renderRoute
 window.onload = renderRoute
 EOF
 
-echo "Frontend multi-pages avec navigation (accueil, show, modifier) installé."
+echo "✅ Frontend avec navbar, footer, suppression et navigation multi-pages installé."
