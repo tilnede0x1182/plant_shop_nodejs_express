@@ -1,5 +1,33 @@
 const { useState, useEffect } = React
 
+function Navbar() {
+  return (
+    <nav className="navbar navbar-expand-lg navbar-dark bg-success custom-navbar mt-3 mx-3">
+      <div className="container">
+        <a className="navbar-brand" href="#" onClick={(e) => { e.preventDefault(); navigate("/") }}>Plant Shop</a>
+        <div className="ms-auto d-flex gap-2">
+          <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/inscription")}>Inscription</button>
+          <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/connexion")}>Connexion</button>
+        </div>
+      </div>
+    </nav>
+  )
+}
+
+function PageInscription() {
+  return React.createElement("div", { className: "mt-4" }, [
+    React.createElement("h2", { key: "h2" }, "Inscription"),
+    React.createElement("p", { key: "p" }, "Formulaire d’inscription à implémenter...")
+  ])
+}
+
+function PageConnexion() {
+  return React.createElement("div", { className: "mt-4" }, [
+    React.createElement("h2", { key: "h2" }, "Connexion"),
+    React.createElement("p", { key: "p" }, "Formulaire de connexion à implémenter...")
+  ])
+}
+
 function navigate(path) {
   window.history.pushState({}, "", path)
   renderRoute()
@@ -21,7 +49,6 @@ function PageAccueil() {
 
   return (
     <div>
-      <h1 className="mb-4">Catalogue</h1>
       <div className="row">
         {plantes.map(p => (
           <div className="col-md-4 mb-3" key={p.id}>
@@ -110,18 +137,42 @@ function renderRoute() {
   const path = window.location.pathname
   const root = document.getElementById("root")
 
+  const withNavbar = (component) => {
+    return React.createElement(React.Fragment, null, [
+      React.createElement(Navbar, { key: "navbar" }),
+      component
+    ])
+  }
+
   if (path === "/") {
-    ReactDOM.createRoot(root).render(<PageAccueil />)
+    ReactDOM.createRoot(root).render(withNavbar(React.createElement(PageAccueil)))
   } else if (path.startsWith("/plante/")) {
     const id = path.split("/")[2]
-    ReactDOM.createRoot(root).render(<PageShow id={id} />)
+    ReactDOM.createRoot(root).render(withNavbar(React.createElement(PageShow, { id: id })))
   } else if (path.startsWith("/modifier/")) {
     const id = path.split("/")[2]
-    ReactDOM.createRoot(root).render(<PageModifier id={id} />)
+    ReactDOM.createRoot(root).render(withNavbar(React.createElement(PageModifier, { id: id })))
+  } else if (path === "/inscription") {
+    ReactDOM.createRoot(root).render(
+      React.createElement(React.Fragment, null, [
+        React.createElement(Navbar, { key: "nav" }),
+        React.createElement(PageInscription, { key: "insc" })
+      ])
+    )
+  } else if (path === "/connexion") {
+    ReactDOM.createRoot(root).render(
+      React.createElement(React.Fragment, null, [
+        React.createElement(Navbar, { key: "nav" }),
+        React.createElement(PageConnexion, { key: "conn" })
+      ])
+    )
   } else {
-    root.innerHTML = "<h2>Page introuvable</h2>"
+    ReactDOM.createRoot(root).render(withNavbar(
+      React.createElement("h2", null, "Page introuvable")
+    ))
   }
 }
+
 
 window.onpopstate = renderRoute
 window.onload = renderRoute

@@ -4,7 +4,10 @@
   "main": "app.js",
   "scripts": {
     "start": "nodemon",
-		"seed": "node db/seed.js"
+		"db:seed": "node db/seed.js",
+		"db:drop": "rm -f db/plantes.db",
+		"db:create": "sqlite3 db/plantes.db < db/init.sql",
+		"db:reset": "npm run db:drop && npm run db:create && npm run db:seed"
   },
   "dependencies": {
     "@faker-js/faker": "^9.6.0",
