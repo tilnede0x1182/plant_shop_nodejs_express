@@ -1,0 +1,23 @@
+body {
+  font-family: system-ui, sans-serif;
+  background-color: #f1f3f5;
+}
+h1 {
+  font-weight: 600;
+  color: #198754;
+}
+.card-form {
+  border-left: 4px solid #198754;
+}
+.alert {
+  font-size: 0.9rem;
+}
+.table td, .table th {
+  vertical-align: middle;
+}
+.table-striped > tbody > tr:nth-of-type(odd) {
+  background-color: #f8f9fa;
+}
+.btn {
+  font-size: 0.875rem;
+}
