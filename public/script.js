@@ -2,10 +2,11 @@
 const { useState, useEffect } = React
 
 // ---------- Données et utilitaires ----------
-let panier = JSON.parse(localStorage.getItem("panier")) || []
 
 // Ajout au panier
 function ajouterAuPanier(plante) {
+  const panier = JSON.parse(localStorage.getItem("panier")) || []
+
   const existing = panier.find(p => p.id === plante.id)
 
   if (existing) {
@@ -18,13 +19,12 @@ function ajouterAuPanier(plante) {
   updatePanierCount()
 }
 
-
 // Mise à jour du badge panier
 function updatePanierCount() {
   const badge = document.getElementById("panier-count")
   const panier = JSON.parse(localStorage.getItem("panier")) || []
-  const totalArticles = panier.reduce((acc, item) => acc + (item.quantite || 1), 0)
-  if (badge) badge.textContent = totalArticles
+  const total = panier.reduce((acc, p) => acc + (p.quantite || 1), 0)
+  if (badge) badge.textContent = total
 }
 
 // Navigation
@@ -405,3 +405,4 @@ function renderRoute() {
 
 window.onpopstate = renderRoute
 window.onload = renderRoute
+window.addEventListener("storage", () => updatePanierCount())
