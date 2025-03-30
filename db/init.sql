@@ -9,5 +9,13 @@ CREATE TABLE plantes (
   stock INTEGER DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS utilisateurs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nom TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  mot_de_passe TEXT NOT NULL,
+  role TEXT NOT NULL CHECK(role IN ('visiteur', 'user', 'admin'))
+);
+
 INSERT INTO plantes (id, nom, description, prix, categorie, stock) VALUES
 ('1', 'Ficus', 'Plante verte d’intérieur', 20, 'intérieur', 5);

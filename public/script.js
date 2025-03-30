@@ -1,12 +1,11 @@
-// ---------- Imports et hooks ----------
+// ----------------- Imports et hooks -----------------
 const { useState, useEffect } = React
 
-// ---------- Données et utilitaires ----------
+// ----------------- Données et utilitaires -----------------
 
 // Ajout au panier
 function ajouterAuPanier(plante) {
   const panier = JSON.parse(localStorage.getItem("panier")) || []
-
   const existing = panier.find(p => p.id === plante.id)
 
   if (existing) {
@@ -40,14 +39,16 @@ function supprimerPlante(id) {
     .then(() => window.location.pathname === "/" ? window.location.reload() : navigate("/"))
 }
 
-// ---------- Pages ----------
+// ----------------- Pages en JSX -----------------
 
-// index (Accueil)
+// PageAccueil (liste de plantes)
 function PageAccueil() {
   const [plantes, setPlantes] = useState([])
 
   useEffect(() => {
-    fetch("/api/plantes").then(res => res.json()).then(setPlantes)
+    fetch("/api/plantes")
+      .then(res => res.json())
+      .then(setPlantes)
   }, [])
 
   return (
@@ -88,12 +89,14 @@ function PageAccueil() {
   )
 }
 
-// show (Afficher une plante)
+// PageShow (affichage d'une plante précise)
 function PageShow({ id }) {
   const [plante, setPlante] = useState(null)
 
   useEffect(() => {
-    fetch("/api/plantes/" + id).then(res => res.json()).then(setPlante)
+    fetch("/api/plantes/" + id)
+      .then(res => res.json())
+      .then(setPlante)
   }, [id])
 
   if (!plante) return <p>Chargement...</p>
@@ -130,11 +133,11 @@ function PageShow({ id }) {
   )
 }
 
-// panier
+// PagePanier
 function PagePanier() {
-  const [items, setItems] = React.useState([])
+  const [items, setItems] = useState([])
 
-  React.useEffect(() => {
+  useEffect(() => {
     const stored = JSON.parse(localStorage.getItem("panier")) || []
     setItems(stored)
   }, [])
@@ -170,7 +173,7 @@ function PagePanier() {
     updatePanierCount()
   }
 
-  const total = items.reduce((acc, p) => acc + (p.prix * (p.quantite || 1)), 0)
+  const total = items.reduce((acc, p) => acc + p.prix * (p.quantite || 1), 0)
 
   if (items.length === 0) {
     return (
@@ -218,28 +221,34 @@ function PagePanier() {
   )
 }
 
-// inscription
+// PageInscription
 function PageInscription() {
-  return React.createElement("div", { className: "mt-4" }, [
-    React.createElement("h2", { key: "h2" }, "Inscription"),
-    React.createElement("p", { key: "p" }, "Formulaire d’inscription à implémenter...")
-  ])
+  return (
+    <div className="mt-4">
+      <h2>Inscription</h2>
+      <p>Formulaire d’inscription à implémenter...</p>
+    </div>
+  )
 }
 
-// connexion
+// PageConnexion
 function PageConnexion() {
-  return React.createElement("div", { className: "mt-4" }, [
-    React.createElement("h2", { key: "h2" }, "Connexion"),
-    React.createElement("p", { key: "p" }, "Formulaire de connexion à implémenter...")
-  ])
+  return (
+    <div className="mt-4">
+      <h2>Connexion</h2>
+      <p>Formulaire de connexion à implémenter...</p>
+    </div>
+  )
 }
 
-// modifier
+// PageModifier
 function PageModifier({ id }) {
   const [form, setForm] = useState(null)
 
   useEffect(() => {
-    fetch("/api/plantes/" + id).then(res => res.json()).then(setForm)
+    fetch("/api/plantes/" + id)
+      .then(res => res.json())
+      .then(setForm)
   }, [id])
 
   function handleChange(e) {
@@ -314,7 +323,7 @@ function PageModifier({ id }) {
   )
 }
 
-// ---------- Navbar ----------
+// ----------------- Navbar en JSX -----------------
 function Navbar() {
   useEffect(() => {
     updatePanierCount()
@@ -334,7 +343,10 @@ function Navbar() {
           Plant Shop
         </a>
         <div className="ms-auto d-flex gap-2 align-items-center">
-          <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/panier")}>
+          <button
+            className="btn btn-outline-light btn-sm"
+            onClick={() => navigate("/panier")}
+          >
             Panier (<span id="panier-count">0</span>)
           </button>
           <button
@@ -355,54 +367,49 @@ function Navbar() {
   )
 }
 
-// ---------- Router ----------
+// ----------------- Router en pur JS (sans JSX) -----------------
 function renderRoute() {
   const path = window.location.pathname
   const root = document.getElementById("root")
 
-  const withNavbar = (component) => {
-    return React.createElement(React.Fragment, null, [
-      React.createElement(Navbar, { key: "navbar" }),
-      component
-    ])
+  function withNavbar(component) {
+    // on encapsule la Navbar + le composant dans un Fragment
+    return React.createElement(
+      React.Fragment,
+      null,
+      [
+        React.createElement(Navbar, { key: "navbar" }),
+        component
+      ]
+    )
   }
+
+  let route
 
   if (path === "/") {
-    ReactDOM.createRoot(root).render(withNavbar(React.createElement(PageAccueil)))
+    route = React.createElement(PageAccueil, null)
   } else if (path.startsWith("/plante/")) {
     const id = path.split("/")[2]
-    ReactDOM.createRoot(root).render(withNavbar(React.createElement(PageShow, { id: id })))
+    route = React.createElement(PageShow, { id: id })
   } else if (path.startsWith("/modifier/")) {
     const id = path.split("/")[2]
-    ReactDOM.createRoot(root).render(withNavbar(React.createElement(PageModifier, { id: id })))
+    route = React.createElement(PageModifier, { id: id })
   } else if (path === "/inscription") {
-    ReactDOM.createRoot(root).render(
-      React.createElement(React.Fragment, null, [
-        React.createElement(Navbar, { key: "nav" }),
-        React.createElement(PageInscription, { key: "insc" })
-      ])
-    )
+    route = React.createElement(PageInscription, null)
   } else if (path === "/connexion") {
-    ReactDOM.createRoot(root).render(
-      React.createElement(React.Fragment, null, [
-        React.createElement(Navbar, { key: "nav" }),
-        React.createElement(PageConnexion, { key: "conn" })
-      ])
-    )
+    route = React.createElement(PageConnexion, null)
   } else if (path === "/panier") {
-    ReactDOM.createRoot(root).render(
-      React.createElement(React.Fragment, null, [
-        React.createElement(Navbar, { key: "nav" }),
-        React.createElement(PagePanier, { key: "panier" })
-      ])
-    )
+    route = React.createElement(PagePanier, null)
   } else {
-    ReactDOM.createRoot(root).render(withNavbar(
-      React.createElement("h2", null, "Page introuvable")
-    ))
+    route = React.createElement("h2", null, "Page introuvable")
   }
+
+  // On rend la Navbar + la page correspondante
+  const finalElement = withNavbar(route)
+  ReactDOM.createRoot(root).render(finalElement)
 }
 
+// ----------------- Activation du router -----------------
 window.onpopstate = renderRoute
 window.onload = renderRoute
 window.addEventListener("storage", () => updatePanierCount())

@@ -1,8 +1,13 @@
+const fs = require("fs")
 const sqlite3 = require("sqlite3").verbose()
 const { faker } = require("@faker-js/faker")
 const path = require("path")
 
 const db = new sqlite3.Database(path.join(__dirname, "plantes.db"))
+
+const NB_PLANTES = 30
+const NB_ADMINS = 3
+const NB_USERS = 15
 
 function generatePlante() {
   return {
@@ -15,11 +20,50 @@ function generatePlante() {
   }
 }
 
+// # # Plantes
 function insertPlante(plante) {
   const stmt = db.prepare("INSERT INTO plantes (id, nom, description, prix, categorie, stock) VALUES (?, ?, ?, ?, ?, ?)")
   stmt.run([plante.id, plante.nom, plante.description, plante.prix, plante.categorie, plante.stock])
   stmt.finalize()
 }
+
+// # Utilisateurs
+const roles = ["user", "admin"]
+const totalUtilisateurs = NB_USERS + NB_ADMINS
+
+const utilisateurs = []
+
+for (let i = 0; i < totalUtilisateurs; i++) {
+  const role = i < NB_USERS ? "user" : "admin"
+  const nom = faker.internet.username()
+  const email = faker.internet.email()
+  const mot_de_passe = faker.internet.password()
+
+  db.run(
+    "INSERT INTO utilisateurs (nom, email, mot_de_passe, role) VALUES (?, ?, ?, ?)",
+    [nom, email, mot_de_passe, role]
+  )
+
+  utilisateurs.push({ role: role, username: email, password: mot_de_passe })
+}
+
+// ## Création du fichier users.txt
+
+let contenu = "Administrateurs :\n\n"
+contenu += utilisateurs
+  .filter(u => u.role === "admin")
+  .map(u => u.username + " " + u.password)
+  .join("\n")
+
+contenu += "\n\nUsers :\n\n"
+contenu += utilisateurs
+  .filter(u => u.role === "user")
+  .map(u => u.username + " " + u.password)
+  .join("\n")
+
+fs.writeFileSync(path.join(__dirname, "../users.txt"), contenu)
+
+// # Ajout dans la BDD
 
 db.serialize(() => {
   db.run("DELETE FROM plantes") // on vide la table d'abord
