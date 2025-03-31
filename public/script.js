@@ -254,7 +254,7 @@ function PageInscription() {
       })
       .then(() => {
         setMessage("Inscription réussie. Vous pouvez maintenant vous connecter.")
-        setTimeout(() => navigate("/connexion"), 1500)
+        navigate("/connexion")
       })
       .catch(() => setError("Erreur lors de l'inscription. Veuillez réessayer."))
   }
@@ -305,8 +305,10 @@ function PageConnexion() {
         return res.json()
       })
       .then(user => {
+        localStorage.setItem("utilisateur", JSON.stringify(user.utilisateur))
+        window.dispatchEvent(new Event("utilisateurChange"))
         setMessage("Connexion réussie.")
-        setTimeout(() => navigate("/"), 1000)
+        navigate("/")
       })
       .catch(() => setError("Email ou mot de passe invalide."))
   }
@@ -494,8 +496,24 @@ function PageAjouter() {
 
 // ----------------- Navbar en JSX -----------------
 function Navbar() {
-  useEffect(() => {
-    updatePanierCount()
+  const [utilisateur, setUtilisateur] = React.useState(null)
+
+  React.useEffect(() => {
+    function loadUser() {
+      const storedUser = JSON.parse(localStorage.getItem("utilisateur"))
+      setUtilisateur(storedUser)
+    }
+
+    // Chargement initial
+    loadUser()
+
+    // Abonnement à l'événement
+    window.addEventListener("utilisateurChange", loadUser)
+
+    // Nettoyage
+    return () => {
+      window.removeEventListener("utilisateurChange", loadUser)
+    }
   }, [])
 
   return (
@@ -511,7 +529,14 @@ function Navbar() {
         >
           Plant Shop
         </a>
+
         <div className="ms-auto d-flex gap-2 align-items-center">
+          {utilisateur && (
+            <span className="text-white ms-2">
+              {utilisateur.prenom + " " + utilisateur.nom}
+              {utilisateur.role === "admin" ? " (Administrateur)" : ""}
+            </span>
+          )}
           <button
             className="btn btn-outline-light btn-sm"
             onClick={() => navigate("/ajouter")}

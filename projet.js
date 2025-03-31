@@ -429,6 +429,7 @@ function PageConnexion() {
         return res.json()
       })
       .then(user => {
+        localStorage.setItem("utilisateur", JSON.stringify(user.utilisateur))
         setMessage("Connexion réussie.")
         setTimeout(() => navigate("/"), 1000)
       })
@@ -618,8 +619,12 @@ function PageAjouter() {
 
 // ----------------- Navbar en JSX -----------------
 function Navbar() {
+  const [utilisateur, setUtilisateur] = useState(null)
+
   useEffect(() => {
     updatePanierCount()
+    const session = JSON.parse(localStorage.getItem("utilisateur"))
+    const utilisateur = session ? session.utilisateur : null
   }, [])
 
   return (
@@ -635,29 +640,23 @@ function Navbar() {
         >
           Plant Shop
         </a>
+
         <div className="ms-auto d-flex gap-2 align-items-center">
-          <button
-            className="btn btn-outline-light btn-sm"
-            onClick={() => navigate("/ajouter")}
-          >
+          {utilisateur && (
+            <span className="text-white ms-2">
+              ({utilisateur.prenom} {utilisateur.nom} – {utilisateur.role})
+            </span>
+          )}
+          <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/ajouter")}>
             Nouvelle plante
           </button>
-          <button
-            className="btn btn-outline-light btn-sm"
-            onClick={() => navigate("/panier")}
-          >
+          <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/panier")}>
             Panier (<span id="panier-count">0</span>)
           </button>
-          <button
-            className="btn btn-outline-light btn-sm"
-            onClick={() => navigate("/inscription")}
-          >
+          <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/inscription")}>
             Inscription
           </button>
-          <button
-            className="btn btn-outline-light btn-sm"
-            onClick={() => navigate("/connexion")}
-          >
+          <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/connexion")}>
             Connexion
           </button>
         </div>
@@ -665,6 +664,7 @@ function Navbar() {
     </nav>
   )
 }
+
 
 // ------------------- Router en pur JS -------------------
 function renderRoute() {
@@ -814,22 +814,35 @@ module.exports = {
 "models/userModel.js"
 const sqlite3 = require("sqlite3").verbose()
 const path = require("path")
-const { v4: uuidv4 } = require('uuid')
 
 const dbPath = path.join(__dirname, "../db/plantes.db")
 const db = new sqlite3.Database(dbPath)
 
 function findByEmail(email, callback) {
-  db.get("SELECT * FROM users WHERE email = ?", [email], (err, row) => {
+  db.get("SELECT * FROM utilisateurs WHERE email = ?", [email], (err, row) => {
     callback(err, row || null)
   })
 }
 
-function createUser(email, password, role, callback) {
-  const id = uuidv4()
+function createUser(data, callback) {
+  const {
+    prenom,
+    nom,
+    email,
+    mot_de_passe,
+    role,
+    adresse,
+    telephone
+  } = data
+
+  const date_inscription = new Date().toISOString()
+  const actif = 1
+
   db.run(
-    "INSERT INTO users (id, email, password, role) VALUES (?, ?, ?, ?)",
-    [id, email, password, role],
+    `INSERT INTO utilisateurs
+    (prenom, nom, email, mot_de_passe, role, adresse, telephone, date_inscription, actif)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [prenom, nom, email, mot_de_passe, role, adresse, telephone, date_inscription, actif],
     (err) => callback(err)
   )
 }
