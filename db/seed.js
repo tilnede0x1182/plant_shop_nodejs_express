@@ -34,7 +34,8 @@ const utilisateurs = []
 
 for (let i = 0; i < totalUtilisateurs; i++) {
   const role = i < NB_USERS ? "user" : "admin"
-  const nom = faker.person.fullName()
+  const prenom = faker.person.firstName()
+  const nom = faker.person.lastName()
   const email = faker.internet.email()
   const mot_de_passe = faker.internet.password()
   const adresse = faker.location.streetAddress() + ", " + faker.location.city()
@@ -44,9 +45,9 @@ for (let i = 0; i < totalUtilisateurs; i++) {
 
   db.run(
     `INSERT INTO utilisateurs
-    (nom, email, mot_de_passe, role, adresse, telephone, date_inscription, actif)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [nom, email, mot_de_passe, role, adresse, telephone, date_inscription, actif]
+    (prenom, nom, email, mot_de_passe, role, adresse, telephone, date_inscription, actif)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [prenom, nom, email, mot_de_passe, role, adresse, telephone, date_inscription, actif]
   )
 
   utilisateurs.push({ role: role, username: email, password: mot_de_passe })

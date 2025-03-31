@@ -224,9 +224,12 @@ function PagePanier() {
 // Inscription
 function PageInscription() {
   const [form, setForm] = useState({
+    prenom: "",
     nom: "",
     email: "",
-    mot_de_passe: ""
+    mot_de_passe: "",
+    adresse: "",
+    telephone: ""
   })
 
   function handleChange(e) {
@@ -235,7 +238,7 @@ function PageInscription() {
 
   function handleSubmit(e) {
     e.preventDefault()
-    alert("Formulaire soumis (inscription) – à connecter au backend")
+    alert("Inscription soumise : à connecter au backend")
   }
 
   return (
@@ -244,8 +247,16 @@ function PageInscription() {
       <form onSubmit={handleSubmit}>
         <input
           className="form-control mb-2"
+          name="prenom"
+          placeholder="Prénom"
+          value={form.prenom}
+          onChange={handleChange}
+          required
+        />
+        <input
+          className="form-control mb-2"
           name="nom"
-          placeholder="Nom"
+          placeholder="Nom complet"
           value={form.nom}
           onChange={handleChange}
           required
@@ -260,7 +271,7 @@ function PageInscription() {
           required
         />
         <input
-          className="form-control mb-3"
+          className="form-control mb-2"
           type="password"
           name="mot_de_passe"
           placeholder="Mot de passe"
@@ -268,12 +279,25 @@ function PageInscription() {
           onChange={handleChange}
           required
         />
+        <input
+          className="form-control mb-2"
+          name="adresse"
+          placeholder="Adresse"
+          value={form.adresse}
+          onChange={handleChange}
+        />
+        <input
+          className="form-control mb-3"
+          name="telephone"
+          placeholder="Téléphone"
+          value={form.telephone}
+          onChange={handleChange}
+        />
         <button className="btn btn-success" type="submit">S'inscrire</button>
       </form>
     </div>
   )
 }
-
 
 // Connection
 function PageConnexion() {
