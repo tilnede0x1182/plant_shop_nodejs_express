@@ -34,7 +34,7 @@ function createUser(data, callback) {
 }
 
 function findAll(callback) {
-  db.all("SELECT * FROM utilisateurs", [], (err, rows) => callback(err, rows))
+  db.all("SELECT * FROM utilisateurs ORDER BY role ASC, nom ASC, prenom ASC", [], (err, rows) => callback(err, rows))
 }
 
 function remove(id, callback) {

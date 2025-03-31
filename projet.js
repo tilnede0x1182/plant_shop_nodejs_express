@@ -665,54 +665,99 @@ function PageUtilisateurs() {
   )
 }
 
-// ----------------- Navbar en JSX -----------------
-function PageUtilisateurs() {
-  const [utilisateurs, setUtilisateurs] = useState([])
+// ------------------------ Navbar ------------------------
+function Navbar() {
+  const [utilisateur, setUtilisateur] = React.useState(null)
 
-  useEffect(() => {
-    fetch("/api/utilisateurs")
-      .then(res => res.json())
-      .then(setUtilisateurs)
+  React.useEffect(() => {
+    function syncUtilisateur() {
+      const session = JSON.parse(localStorage.getItem("utilisateur"))
+      setUtilisateur(session)
+    }
+
+    updatePanierCount()
+    syncUtilisateur()
+
+    window.addEventListener("utilisateurChange", syncUtilisateur)
+    window.addEventListener("storage", syncUtilisateur)
+
+    return () => {
+      window.removeEventListener("utilisateurChange", syncUtilisateur)
+      window.removeEventListener("storage", syncUtilisateur)
+    }
   }, [])
 
-  function supprimer(id) {
-    if (!confirm("Supprimer cet utilisateur ?")) return
-    fetch("/api/utilisateurs/" + id, { method: "DELETE" })
-      .then(() => setUtilisateurs(utilisateurs.filter(u => u.id !== id)))
+  function capitalize(str) {
+    if (!str) return ""
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
+  }
+
+  function deconnexion() {
+    localStorage.removeItem("utilisateur")
+    window.dispatchEvent(new Event("utilisateurChange"))
+    navigate("/")
   }
 
   return (
-    <div className="mt-4">
-      <h2 className="mb-3">Gestion des utilisateurs</h2>
-      <table className="table table-bordered">
-        <thead>
-          <tr>
-            <th>Nom</th>
-            <th>Email</th>
-            <th>Rôle</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {utilisateurs.map(u => (
-            <tr key={u.id}>
-              <td>{u.prenom} {u.nom}</td>
-              <td>{u.email}</td>
-              <td>{u.role}</td>
-              <td>
-                <button className="btn btn-sm btn-danger" onClick={() => supprimer(u.id)}>
-                  Supprimer
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <nav className="navbar navbar-expand-lg navbar-dark bg-success custom-navbar mt-3 mx-3">
+      <div className="container">
+        <a
+          className="navbar-brand"
+          href="#"
+          onClick={(e) => {
+            e.preventDefault()
+            navigate("/")
+          }}
+        >
+          Plant Shop
+        </a>
+
+        <div className="ms-auto d-flex gap-2 align-items-center">
+          {utilisateur && (
+            <span className="text-white ms-2">
+              {capitalize(utilisateur.nom) + " " + capitalize(utilisateur.prenom)}
+              {utilisateur.role === "admin" ? " (Administrateur)" : ""}
+            </span>
+          )}
+
+          {utilisateur && utilisateur.role === "admin" && (
+            <div className="d-flex gap-2">
+              <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/ajouter")}>
+                Nouvelle plante
+              </button>
+              <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/admin/utilisateurs")}>
+                Utilisateurs
+              </button>
+            </div>
+          )}
+
+          <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/panier")}>
+            Panier (<span id="panier-count">0</span>)
+          </button>
+
+          {!utilisateur && (
+            <div className="d-flex gap-2">
+              <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/inscription")}>
+                Inscription
+              </button>
+              <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/connexion")}>
+                Connexion
+              </button>
+            </div>
+          )}
+
+          {utilisateur && (
+            <button className="btn btn-outline-light btn-sm" onClick={deconnexion}>
+              Déconnexion
+            </button>
+          )}
+        </div>
+      </div>
+    </nav>
   )
 }
 
-// ------------------- Router en pur JS -------------------
+// ------------------------ Router ------------------------
 function renderRoute() {
   const path = window.location.pathname
   // const root = document.getElementById("root")
@@ -896,7 +941,7 @@ function createUser(data, callback) {
 }
 
 function findAll(callback) {
-  db.all("SELECT * FROM utilisateurs", [], (err, rows) => callback(err, rows))
+  db.all("SELECT * FROM utilisateurs ORDER BY role ASC, nom ASC, prenom ASC", [], (err, rows) => callback(err, rows))
 }
 
 function remove(id, callback) {

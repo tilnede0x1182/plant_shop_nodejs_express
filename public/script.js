@@ -668,7 +668,7 @@ function renderRoute() {
   } else if (path === "/panier") {
     route = React.createElement(PagePanier, null)
   } else if (path === "/admin/utilisateurs") {
-      route = React.createElement(PageUtilisateurs, null)
+    route = React.createElement(PageUtilisateurs, null)
   } else {
     route = React.createElement("h2", null, "Page introuvable")
   }
