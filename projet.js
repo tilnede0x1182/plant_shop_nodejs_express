@@ -168,11 +168,15 @@ function supprimerPlante(id) {
 // PageAccueil (liste de plantes)
 function PageAccueil() {
   const [plantes, setPlantes] = useState([])
+  const [utilisateur, setUtilisateur] = useState(null)
 
   useEffect(() => {
     fetch("/api/plantes")
       .then(res => res.json())
       .then(setPlantes)
+
+    const session = JSON.parse(localStorage.getItem("utilisateur"))
+    setUtilisateur(session)
   }, [])
 
   return (
@@ -186,18 +190,22 @@ function PageAccueil() {
                 <p>{p.prix} € – {p.categorie}</p>
               </div>
               <div className="d-flex gap-2 mt-3">
-                <button
-                  className="btn btn-sm btn-outline-primary"
-                  onClick={() => navigate("/modifier/" + p.id)}
-                >
-                  Modifier
-                </button>
-                <button
-                  className="btn btn-sm btn-outline-danger"
-                  onClick={() => supprimerPlante(p.id)}
-                >
-                  Supprimer
-                </button>
+                {utilisateur && utilisateur.role === "admin" && (
+                  <div className="d-flex gap-2">
+                    <button
+                      className="btn btn-sm btn-outline-primary"
+                      onClick={() => navigate("/modifier/" + p.id)}
+                    >
+                      Modifier
+                    </button>
+                    <button
+                      className="btn btn-sm btn-outline-danger"
+                      onClick={() => supprimerPlante(p.id)}
+                    >
+                      Supprimer
+                    </button>
+                  </div>
+                )}
                 <button
                   className="btn btn-sm btn-outline-success"
                   onClick={() => ajouterAuPanier(p)}
@@ -216,11 +224,15 @@ function PageAccueil() {
 // PageShow (affichage d'une plante précise)
 function PageShow({ id }) {
   const [plante, setPlante] = useState(null)
+  const [utilisateur, setUtilisateur] = useState(null)
 
   useEffect(() => {
     fetch("/api/plantes/" + id)
       .then(res => res.json())
       .then(setPlante)
+
+    const session = JSON.parse(localStorage.getItem("utilisateur"))
+    setUtilisateur(session)
   }, [id])
 
   if (!plante) return <p>Chargement...</p>
@@ -232,27 +244,34 @@ function PageShow({ id }) {
       <p><strong>Prix :</strong> {plante.prix} €</p>
       <p><strong>Catégorie :</strong> {plante.categorie}</p>
       <p><strong>Stock :</strong> {plante.stock}</p>
-      <button
-        className="btn btn-primary me-2"
-        onClick={() => navigate("/modifier/" + plante.id)}
-      >
-        Modifier
-      </button>
-      <button
-        className="btn btn-danger me-2"
-        onClick={() => supprimerPlante(plante.id)}
-      >
-        Supprimer
-      </button>
-      <button
-        className="btn btn-success me-2"
-        onClick={() => ajouterAuPanier(plante)}
-      >
-        Ajouter au panier
-      </button>
-      <button className="btn btn-secondary" onClick={() => navigate("/")}>
-        Retour
-      </button>
+
+      <div className="d-flex gap-2 mt-3">
+        {utilisateur && utilisateur.role === "admin" && (
+          <div className="d-flex gap-2">
+            <button
+              className="btn btn-primary"
+              onClick={() => navigate("/modifier/" + plante.id)}
+            >
+              Modifier
+            </button>
+            <button
+              className="btn btn-danger"
+              onClick={() => supprimerPlante(plante.id)}
+            >
+              Supprimer
+            </button>
+          </div>
+        )}
+        <button
+          className="btn btn-success"
+          onClick={() => ajouterAuPanier(plante)}
+        >
+          Ajouter au panier
+        </button>
+        <button className="btn btn-secondary" onClick={() => navigate("/")}>
+          Retour
+        </button>
+      </div>
     </div>
   )
 }
@@ -792,7 +811,7 @@ function renderRoute() {
   } else if (path === "/panier") {
     route = React.createElement(PagePanier, null)
   } else if (path === "/admin/utilisateurs") {
-      route = React.createElement(PageUtilisateurs, null)
+    route = React.createElement(PageUtilisateurs, null)
   } else {
     route = React.createElement("h2", null, "Page introuvable")
   }
