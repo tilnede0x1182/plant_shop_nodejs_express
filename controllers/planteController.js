@@ -17,9 +17,14 @@ function getById(req, res) {
 
 function create(req, res) {
   const plante = req.body
-  model.create(plante, function(err) {
+
+  if (!plante.nom || !plante.prix || !plante.stock) {
+    return res.status(400).json({ message: "Champs requis manquants." })
+  }
+
+  model.create(plante, function(err, newPlante) {
     if (err) return res.status(500).json({ message: "Erreur insertion" })
-    res.status(201).json(plante)
+    res.status(201).json(newPlante)
   })
 }
 

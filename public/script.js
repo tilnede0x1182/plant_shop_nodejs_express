@@ -323,6 +323,91 @@ function PageModifier({ id }) {
   )
 }
 
+// Ajouter une nouvelle plante
+function PageAjouter() {
+  const [form, setForm] = useState({
+    nom: "",
+    description: "",
+    prix: "",
+    categorie: "",
+    stock: ""
+  })
+
+  function handleChange(e) {
+    setForm({ ...form, [e.target.name]: e.target.value })
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault()
+    fetch("/api/plantes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...form,
+        prix: parseInt(form.prix),
+        stock: parseInt(form.stock)
+      })
+    }).then(() => navigate("/"))
+  }
+
+  return (
+    <div>
+      <h2 className="mb-3">Ajouter une plante</h2>
+      <form onSubmit={handleSubmit}>
+        <input
+          className="form-control mb-2"
+          name="nom"
+          placeholder="Nom"
+          value={form.nom}
+          onChange={handleChange}
+          required
+        />
+        <input
+          className="form-control mb-2"
+          name="description"
+          placeholder="Description"
+          value={form.description}
+          onChange={handleChange}
+        />
+        <input
+          className="form-control mb-2"
+          type="number"
+          name="prix"
+          placeholder="Prix"
+          value={form.prix}
+          onChange={handleChange}
+          required
+        />
+        <input
+          className="form-control mb-2"
+          name="categorie"
+          placeholder="Catégorie"
+          value={form.categorie}
+          onChange={handleChange}
+        />
+        <input
+          className="form-control mb-3"
+          type="number"
+          name="stock"
+          placeholder="Stock"
+          value={form.stock}
+          onChange={handleChange}
+        />
+        <button className="btn btn-success me-2" type="submit">
+          Ajouter
+        </button>
+        <button
+          className="btn btn-secondary"
+          type="button"
+          onClick={() => navigate("/")}
+        >
+          Annuler
+        </button>
+      </form>
+    </div>
+  )
+}
+
 // ----------------- Navbar en JSX -----------------
 function Navbar() {
   useEffect(() => {
@@ -343,6 +428,12 @@ function Navbar() {
           Plant Shop
         </a>
         <div className="ms-auto d-flex gap-2 align-items-center">
+          <button
+            className="btn btn-outline-light btn-sm"
+            onClick={() => navigate("/ajouter")}
+          >
+            Nouvelle plante
+          </button>
           <button
             className="btn btn-outline-light btn-sm"
             onClick={() => navigate("/panier")}
@@ -367,7 +458,7 @@ function Navbar() {
   )
 }
 
-// ----------------- Router en pur JS (sans JSX) -----------------
+// ------------------- Router en pur JS -------------------
 function renderRoute() {
   const path = window.location.pathname
   const root = document.getElementById("root")
@@ -391,6 +482,8 @@ function renderRoute() {
   } else if (path.startsWith("/plante/")) {
     const id = path.split("/")[2]
     route = React.createElement(PageShow, { id: id })
+  } else if (path === "/ajouter") {
+    route = React.createElement(PageAjouter, null)
   } else if (path.startsWith("/modifier/")) {
     const id = path.split("/")[2]
     route = React.createElement(PageModifier, { id: id })

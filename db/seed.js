@@ -11,7 +11,6 @@ const NB_USERS = 15
 
 function generatePlante() {
   return {
-    id: faker.string.uuid(),
     nom: faker.word.words(1),
     description: faker.lorem.sentence(),
     prix: faker.number.int({ min: 5, max: 50 }),
@@ -22,8 +21,8 @@ function generatePlante() {
 
 // # # Plantes
 function insertPlante(plante) {
-  const stmt = db.prepare("INSERT INTO plantes (id, nom, description, prix, categorie, stock) VALUES (?, ?, ?, ?, ?, ?)")
-  stmt.run([plante.id, plante.nom, plante.description, plante.prix, plante.categorie, plante.stock])
+  const stmt = db.prepare("INSERT INTO plantes (nom, description, prix, categorie, stock) VALUES (?, ?, ?, ?, ?)")
+  stmt.run([plante.nom, plante.description, plante.prix, plante.categorie, plante.stock])
   stmt.finalize()
 }
 
