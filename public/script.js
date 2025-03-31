@@ -409,7 +409,7 @@ function PageModifier({ id }) {
   )
 }
 
-// Ajouter une nouvelle plante
+// Ajouter une nouvelle plante - admin
 function PageAjouter() {
   const [form, setForm] = useState({
     nom: "",
@@ -494,27 +494,85 @@ function PageAjouter() {
   )
 }
 
-// ----------------- Navbar en JSX -----------------
+// Gestion des utilisateurs - admin
+function PageUtilisateurs() {
+  const [utilisateurs, setUtilisateurs] = useState([])
+
+  useEffect(() => {
+    fetch("/api/utilisateurs")
+      .then(res => res.json())
+      .then(setUtilisateurs)
+  }, [])
+
+  function supprimer(id) {
+    if (!confirm("Supprimer cet utilisateur ?")) return
+    fetch("/api/utilisateurs/" + id, { method: "DELETE" })
+      .then(() => setUtilisateurs(utilisateurs.filter(u => u.id !== id)))
+  }
+
+  return (
+    <div className="mt-4">
+      <h2 className="mb-3">Gestion des utilisateurs</h2>
+      <table className="table table-bordered">
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Email</th>
+            <th>Rôle</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {utilisateurs.map(u => (
+            <tr key={u.id}>
+              <td>{u.prenom} {u.nom}</td>
+              <td>{u.email}</td>
+              <td>{u.role}</td>
+              <td>
+                <button className="btn btn-sm btn-danger" onClick={() => supprimer(u.id)}>
+                  Supprimer
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// ------------------------ Navbar ------------------------
 function Navbar() {
   const [utilisateur, setUtilisateur] = React.useState(null)
 
   React.useEffect(() => {
-    function loadUser() {
-      const storedUser = JSON.parse(localStorage.getItem("utilisateur"))
-      setUtilisateur(storedUser)
+    function syncUtilisateur() {
+      const session = JSON.parse(localStorage.getItem("utilisateur"))
+      setUtilisateur(session)
     }
 
-    // Chargement initial
-    loadUser()
+    updatePanierCount()
+    syncUtilisateur()
 
-    // Abonnement à l'événement
-    window.addEventListener("utilisateurChange", loadUser)
+    window.addEventListener("utilisateurChange", syncUtilisateur)
+    window.addEventListener("storage", syncUtilisateur)
 
-    // Nettoyage
     return () => {
-      window.removeEventListener("utilisateurChange", loadUser)
+      window.removeEventListener("utilisateurChange", syncUtilisateur)
+      window.removeEventListener("storage", syncUtilisateur)
     }
   }, [])
+
+  function capitalize(str) {
+    if (!str) return ""
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
+  }
+
+  function deconnexion() {
+    localStorage.removeItem("utilisateur")
+    window.dispatchEvent(new Event("utilisateurChange"))
+    navigate("/")
+  }
 
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-success custom-navbar mt-3 mx-3">
@@ -533,41 +591,49 @@ function Navbar() {
         <div className="ms-auto d-flex gap-2 align-items-center">
           {utilisateur && (
             <span className="text-white ms-2">
-              {utilisateur.prenom + " " + utilisateur.nom}
+              {capitalize(utilisateur.nom) + " " + capitalize(utilisateur.prenom)}
               {utilisateur.role === "admin" ? " (Administrateur)" : ""}
             </span>
           )}
-          <button
-            className="btn btn-outline-light btn-sm"
-            onClick={() => navigate("/ajouter")}
-          >
-            Nouvelle plante
-          </button>
-          <button
-            className="btn btn-outline-light btn-sm"
-            onClick={() => navigate("/panier")}
-          >
+
+          {utilisateur && utilisateur.role === "admin" && (
+            <div className="d-flex gap-2">
+              <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/ajouter")}>
+                Nouvelle plante
+              </button>
+              <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/admin/utilisateurs")}>
+                Utilisateurs
+              </button>
+            </div>
+          )}
+
+          <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/panier")}>
             Panier (<span id="panier-count">0</span>)
           </button>
-          <button
-            className="btn btn-outline-light btn-sm"
-            onClick={() => navigate("/inscription")}
-          >
-            Inscription
-          </button>
-          <button
-            className="btn btn-outline-light btn-sm"
-            onClick={() => navigate("/connexion")}
-          >
-            Connexion
-          </button>
+
+          {!utilisateur && (
+            <div className="d-flex gap-2">
+              <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/inscription")}>
+                Inscription
+              </button>
+              <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/connexion")}>
+                Connexion
+              </button>
+            </div>
+          )}
+
+          {utilisateur && (
+            <button className="btn btn-outline-light btn-sm" onClick={deconnexion}>
+              Déconnexion
+            </button>
+          )}
         </div>
       </div>
     </nav>
   )
 }
 
-// ------------------- Router en pur JS -------------------
+// ------------------------ Router ------------------------
 function renderRoute() {
   const path = window.location.pathname
   // const root = document.getElementById("root")
@@ -601,6 +667,8 @@ function renderRoute() {
     route = React.createElement(PageConnexion, null)
   } else if (path === "/panier") {
     route = React.createElement(PagePanier, null)
+  } else if (path === "/admin/utilisateurs") {
+      route = React.createElement(PageUtilisateurs, null)
   } else {
     route = React.createElement("h2", null, "Page introuvable")
   }

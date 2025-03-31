@@ -33,7 +33,17 @@ function createUser(data, callback) {
   )
 }
 
+function findAll(callback) {
+  db.all("SELECT * FROM utilisateurs", [], (err, rows) => callback(err, rows))
+}
+
+function remove(id, callback) {
+  db.run("DELETE FROM utilisateurs WHERE id = ?", [id], (err) => callback(err))
+}
+
 module.exports = {
   findByEmail,
-  createUser
+  createUser,
+  findAll,
+  remove
 }

@@ -378,7 +378,7 @@ function PageInscription() {
       })
       .then(() => {
         setMessage("Inscription réussie. Vous pouvez maintenant vous connecter.")
-        setTimeout(() => navigate("/connexion"), 1500)
+        navigate("/connexion")
       })
       .catch(() => setError("Erreur lors de l'inscription. Veuillez réessayer."))
   }
@@ -430,8 +430,9 @@ function PageConnexion() {
       })
       .then(user => {
         localStorage.setItem("utilisateur", JSON.stringify(user.utilisateur))
+        window.dispatchEvent(new Event("utilisateurChange"))
         setMessage("Connexion réussie.")
-        setTimeout(() => navigate("/"), 1000)
+        navigate("/")
       })
       .catch(() => setError("Email ou mot de passe invalide."))
   }
@@ -532,7 +533,7 @@ function PageModifier({ id }) {
   )
 }
 
-// Ajouter une nouvelle plante
+// Ajouter une nouvelle plante - admin
 function PageAjouter() {
   const [form, setForm] = useState({
     nom: "",
@@ -617,54 +618,99 @@ function PageAjouter() {
   )
 }
 
-// ----------------- Navbar en JSX -----------------
-function Navbar() {
-  const [utilisateur, setUtilisateur] = useState(null)
+// Gestion des utilisateurs - admin
+function PageUtilisateurs() {
+  const [utilisateurs, setUtilisateurs] = useState([])
 
   useEffect(() => {
-    updatePanierCount()
-    const session = JSON.parse(localStorage.getItem("utilisateur"))
-    const utilisateur = session ? session.utilisateur : null
+    fetch("/api/utilisateurs")
+      .then(res => res.json())
+      .then(setUtilisateurs)
   }, [])
 
-  return (
-    <nav className="navbar navbar-expand-lg navbar-dark bg-success custom-navbar mt-3 mx-3">
-      <div className="container">
-        <a
-          className="navbar-brand"
-          href="#"
-          onClick={(e) => {
-            e.preventDefault()
-            navigate("/")
-          }}
-        >
-          Plant Shop
-        </a>
+  function supprimer(id) {
+    if (!confirm("Supprimer cet utilisateur ?")) return
+    fetch("/api/utilisateurs/" + id, { method: "DELETE" })
+      .then(() => setUtilisateurs(utilisateurs.filter(u => u.id !== id)))
+  }
 
-        <div className="ms-auto d-flex gap-2 align-items-center">
-          {utilisateur && (
-            <span className="text-white ms-2">
-              ({utilisateur.prenom} {utilisateur.nom} – {utilisateur.role})
-            </span>
-          )}
-          <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/ajouter")}>
-            Nouvelle plante
-          </button>
-          <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/panier")}>
-            Panier (<span id="panier-count">0</span>)
-          </button>
-          <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/inscription")}>
-            Inscription
-          </button>
-          <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/connexion")}>
-            Connexion
-          </button>
-        </div>
-      </div>
-    </nav>
+  return (
+    <div className="mt-4">
+      <h2 className="mb-3">Gestion des utilisateurs</h2>
+      <table className="table table-bordered">
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Email</th>
+            <th>Rôle</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {utilisateurs.map(u => (
+            <tr key={u.id}>
+              <td>{u.prenom} {u.nom}</td>
+              <td>{u.email}</td>
+              <td>{u.role}</td>
+              <td>
+                <button className="btn btn-sm btn-danger" onClick={() => supprimer(u.id)}>
+                  Supprimer
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   )
 }
 
+// ----------------- Navbar en JSX -----------------
+function PageUtilisateurs() {
+  const [utilisateurs, setUtilisateurs] = useState([])
+
+  useEffect(() => {
+    fetch("/api/utilisateurs")
+      .then(res => res.json())
+      .then(setUtilisateurs)
+  }, [])
+
+  function supprimer(id) {
+    if (!confirm("Supprimer cet utilisateur ?")) return
+    fetch("/api/utilisateurs/" + id, { method: "DELETE" })
+      .then(() => setUtilisateurs(utilisateurs.filter(u => u.id !== id)))
+  }
+
+  return (
+    <div className="mt-4">
+      <h2 className="mb-3">Gestion des utilisateurs</h2>
+      <table className="table table-bordered">
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Email</th>
+            <th>Rôle</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {utilisateurs.map(u => (
+            <tr key={u.id}>
+              <td>{u.prenom} {u.nom}</td>
+              <td>{u.email}</td>
+              <td>{u.role}</td>
+              <td>
+                <button className="btn btn-sm btn-danger" onClick={() => supprimer(u.id)}>
+                  Supprimer
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
 
 // ------------------- Router en pur JS -------------------
 function renderRoute() {
@@ -700,6 +746,8 @@ function renderRoute() {
     route = React.createElement(PageConnexion, null)
   } else if (path === "/panier") {
     route = React.createElement(PagePanier, null)
+  } else if (path === "/admin/utilisateurs") {
+      route = React.createElement(PageUtilisateurs, null)
   } else {
     route = React.createElement("h2", null, "Page introuvable")
   }
@@ -847,9 +895,19 @@ function createUser(data, callback) {
   )
 }
 
+function findAll(callback) {
+  db.all("SELECT * FROM utilisateurs", [], (err, rows) => callback(err, rows))
+}
+
+function remove(id, callback) {
+  db.run("DELETE FROM utilisateurs WHERE id = ?", [id], (err) => callback(err))
+}
+
 module.exports = {
   findByEmail,
-  createUser
+  createUser,
+  findAll,
+  remove
 }
 
 
@@ -857,9 +915,23 @@ module.exports = {
 const express = require("express")
 const router = express.Router()
 const authController = require("../controllers/authController")
+const userModel = require("../models/userModel")
 
 router.post("/utilisateurs", authController.registerUser)
 router.post("/login", authController.loginUser)
+router.get("/utilisateurs", (req, res) => {
+  userModel.findAll((err, users) => {
+    if (err) return res.status(500).json({ error: "Erreur lecture utilisateurs" })
+    res.json(users)
+  })
+})
+
+router.delete("/utilisateurs/:id", (req, res) => {
+  userModel.remove(req.params.id, (err) => {
+    if (err) return res.status(500).json({ error: "Erreur suppression" })
+    res.status(204).send()
+  })
+})
 
 module.exports = router
 
