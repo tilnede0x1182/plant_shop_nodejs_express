@@ -221,25 +221,104 @@ function PagePanier() {
   )
 }
 
-// PageInscription
+// Inscription
 function PageInscription() {
+  const [form, setForm] = useState({
+    nom: "",
+    email: "",
+    mot_de_passe: ""
+  })
+
+  function handleChange(e) {
+    setForm({ ...form, [e.target.name]: e.target.value })
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault()
+    alert("Formulaire soumis (inscription) – à connecter au backend")
+  }
+
   return (
     <div className="mt-4">
-      <h2>Inscription</h2>
-      <p>Formulaire d’inscription à implémenter...</p>
+      <h2 className="mb-3">Inscription</h2>
+      <form onSubmit={handleSubmit}>
+        <input
+          className="form-control mb-2"
+          name="nom"
+          placeholder="Nom"
+          value={form.nom}
+          onChange={handleChange}
+          required
+        />
+        <input
+          className="form-control mb-2"
+          type="email"
+          name="email"
+          placeholder="Email"
+          value={form.email}
+          onChange={handleChange}
+          required
+        />
+        <input
+          className="form-control mb-3"
+          type="password"
+          name="mot_de_passe"
+          placeholder="Mot de passe"
+          value={form.mot_de_passe}
+          onChange={handleChange}
+          required
+        />
+        <button className="btn btn-success" type="submit">S'inscrire</button>
+      </form>
     </div>
   )
 }
 
-// PageConnexion
+
+// Connection
 function PageConnexion() {
+  const [form, setForm] = useState({
+    email: "",
+    mot_de_passe: ""
+  })
+
+  function handleChange(e) {
+    setForm({ ...form, [e.target.name]: e.target.value })
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault()
+    alert("Formulaire soumis (connexion) – à connecter au backend")
+  }
+
   return (
     <div className="mt-4">
-      <h2>Connexion</h2>
-      <p>Formulaire de connexion à implémenter...</p>
+      <h2 className="mb-3">Connexion</h2>
+      <form onSubmit={handleSubmit}>
+        <input
+          className="form-control mb-2"
+          type="email"
+          name="email"
+          placeholder="Email"
+          value={form.email}
+          onChange={handleChange}
+          required
+        />
+        <input
+          className="form-control mb-3"
+          type="password"
+          name="mot_de_passe"
+          placeholder="Mot de passe"
+          value={form.mot_de_passe}
+          onChange={handleChange}
+          required
+        />
+        <button className="btn btn-primary" type="submit">Se connecter</button>
+      </form>
     </div>
   )
 }
+
 
 // PageModifier
 function PageModifier({ id }) {

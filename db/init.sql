@@ -14,7 +14,11 @@ CREATE TABLE IF NOT EXISTS utilisateurs (
   nom TEXT NOT NULL,
   email TEXT NOT NULL UNIQUE,
   mot_de_passe TEXT NOT NULL,
-  role TEXT NOT NULL CHECK(role IN ('visiteur', 'user', 'admin'))
+  role TEXT NOT NULL CHECK(role IN ('visiteur', 'user', 'admin')),
+  adresse TEXT,
+  telephone TEXT,
+  date_inscription TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  actif INTEGER NOT NULL DEFAULT 1
 );
 
 INSERT INTO plantes (id, nom, description, prix, categorie, stock) VALUES
