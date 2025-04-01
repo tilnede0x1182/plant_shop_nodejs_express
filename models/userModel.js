@@ -37,6 +37,15 @@ function findAll(callback) {
   db.all("SELECT * FROM utilisateurs ORDER BY role ASC, nom ASC, prenom ASC", [], (err, rows) => callback(err, rows))
 }
 
+function update(id, data, callback) {
+  const { prenom, nom, email, adresse, telephone } = data
+  db.run(
+    `UPDATE utilisateurs SET prenom = ?, nom = ?, email = ?, adresse = ?, telephone = ? WHERE id = ?`,
+    [prenom, nom, email, adresse, telephone, id],
+    callback
+  )
+}
+
 function remove(id, callback) {
   db.run("DELETE FROM utilisateurs WHERE id = ?", [id], (err) => callback(err))
 }
@@ -45,5 +54,6 @@ module.exports = {
   findByEmail,
   createUser,
   findAll,
-  remove
+  remove,
+  update
 }

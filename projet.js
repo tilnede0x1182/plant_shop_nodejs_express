@@ -166,7 +166,7 @@ function supprimerPlante(id) {
 // ----------------- Pages en JSX -----------------
 
 // PageAccueil (liste de plantes)
-function PageAccueil() {
+function renderPlantListPage() {
   const [plantes, setPlantes] = useState([])
   const [utilisateur, setUtilisateur] = useState(null)
 
@@ -222,7 +222,7 @@ function PageAccueil() {
 }
 
 // PageShow (affichage d'une plante précise)
-function PageShow({ id }) {
+function renderPlantShowPage({ id }) {
   const [plante, setPlante] = useState(null)
   const [utilisateur, setUtilisateur] = useState(null)
 
@@ -277,7 +277,7 @@ function PageShow({ id }) {
 }
 
 // PagePanier
-function PagePanier() {
+function renderCartPage() {
   const [items, setItems] = useState([])
 
   useEffect(() => {
@@ -365,7 +365,7 @@ function PagePanier() {
 }
 
 // Inscription
-function PageInscription() {
+function renderRegisterPage() {
   const [form, setForm] = useState({
     prenom: "",
     nom: "",
@@ -421,7 +421,7 @@ function PageInscription() {
 }
 
 // Connection
-function PageConnexion() {
+function renderLoginPage() {
   const [form, setForm] = useState({
     email: "",
     mot_de_passe: ""
@@ -471,7 +471,7 @@ function PageConnexion() {
 }
 
 // PageModifier
-function PageModifier({ id }) {
+function renderPlantEditPage({ id }) {
   const [form, setForm] = useState(null)
 
   useEffect(() => {
@@ -553,7 +553,7 @@ function PageModifier({ id }) {
 }
 
 // Ajouter une nouvelle plante - admin
-function PageAjouter() {
+function renderPlantCreatePage() {
   const [form, setForm] = useState({
     nom: "",
     description: "",
@@ -638,7 +638,7 @@ function PageAjouter() {
 }
 
 // Gestion des utilisateurs - admin
-function PageUtilisateurs() {
+function renderUserManagePage() {
   const [utilisateurs, setUtilisateurs] = useState([])
 
   useEffect(() => {
@@ -714,7 +714,7 @@ function Navbar() {
   function deconnexion() {
     localStorage.removeItem("utilisateur")
     window.dispatchEvent(new Event("utilisateurChange"))
-    navigate("/")
+    window.location.href = "/" // recharge complète de la page
   }
 
   return (
@@ -795,23 +795,23 @@ function renderRoute() {
   let route
 
   if (path === "/") {
-    route = React.createElement(PageAccueil, null)
+    route = React.createElement(renderPlantListPage, null)
   } else if (path.startsWith("/plante/")) {
     const id = path.split("/")[2]
-    route = React.createElement(PageShow, { id: id })
+    route = React.createElement(renderPlantShowPage, { id: id })
   } else if (path === "/ajouter") {
-    route = React.createElement(PageAjouter, null)
+    route = React.createElement(renderPlantCreatePage, null)
   } else if (path.startsWith("/modifier/")) {
     const id = path.split("/")[2]
-    route = React.createElement(PageModifier, { id: id })
+    route = React.createElement(renderPlantEditPage, { id: id })
   } else if (path === "/inscription") {
-    route = React.createElement(PageInscription, null)
+    route = React.createElement(renderRegisterPage, null)
   } else if (path === "/connexion") {
-    route = React.createElement(PageConnexion, null)
+    route = React.createElement(renderLoginPage, null)
   } else if (path === "/panier") {
-    route = React.createElement(PagePanier, null)
+    route = React.createElement(renderCartPage, null)
   } else if (path === "/admin/utilisateurs") {
-    route = React.createElement(PageUtilisateurs, null)
+    route = React.createElement(renderUserManagePage, null)
   } else {
     route = React.createElement("h2", null, "Page introuvable")
   }
