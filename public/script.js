@@ -594,6 +594,13 @@ function renderUserProfilePage({ id }) {
       body: JSON.stringify(form)
     }).then(() => {
       setMessage("Les informations ont été mises à jour avec succès.")
+
+      const session = JSON.parse(localStorage.getItem("utilisateur"))
+      if (session && (session.id == id || session.role === "admin")) {
+        const updated = { ...session, ...form }
+        localStorage.setItem("utilisateur", JSON.stringify(updated))
+        window.dispatchEvent(new Event("utilisateurChange"))
+      }
     })
   }
 

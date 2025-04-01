@@ -122,7 +122,7 @@ module.exports = {
 
 
 "public/script.js"
-// ----------------- Imports et hooks -----------------
+// ------------------- Imports et hooks ---------------------
 const { useState, useEffect } = React
 
 // ----------------- Données et utilitaires -----------------
@@ -470,7 +470,7 @@ function renderLoginPage() {
   )
 }
 
-// PageModifier
+// PageModifier une plante
 function renderPlantEditPage({ id }) {
   const [form, setForm] = useState(null)
 
@@ -668,7 +668,11 @@ function renderUserManagePage() {
         <tbody>
           {utilisateurs.map(u => (
             <tr key={u.id}>
-              <td>{u.prenom} {u.nom}</td>
+              <td>
+                <a href="#" onClick={(e) => { e.preventDefault(); navigate("/utilisateur/" + u.id) }}>
+                  {u.prenom} {u.nom}
+                </a>
+              </td>
               <td>{u.email}</td>
               <td>{u.role}</td>
               <td>
@@ -680,6 +684,68 @@ function renderUserManagePage() {
           ))}
         </tbody>
       </table>
+    </div>
+  )
+}
+
+function renderUserProfilePage({ id }) {
+  const [utilisateur, setUtilisateur] = useState(null)
+  const [form, setForm] = useState(null)
+  const [message, setMessage] = useState(null)
+
+  useEffect(() => {
+    const session = JSON.parse(localStorage.getItem("utilisateur"))
+    setUtilisateur(session)
+
+    fetch("/api/utilisateurs")
+      .then(res => res.json())
+      .then(data => {
+        const cible = data.find(u => u.id == id)
+        setForm(cible)
+      })
+  }, [id])
+
+  function handleChange(e) {
+    setForm({ ...form, [e.target.name]: e.target.value })
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault()
+
+    fetch("/api/utilisateurs/" + id, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form)
+    }).then(() => {
+      setMessage("Les informations ont été mises à jour avec succès.")
+    })
+  }
+
+  if (!form) return <p>Chargement...</p>
+
+  const peutModifier = utilisateur && (utilisateur.id == id || utilisateur.role === "admin")
+
+  return (
+    <div className="mt-4">
+      <h2 className="mb-3">Profil utilisateur</h2>
+      {message && (
+        <div className="alert alert-success" role="alert">
+          {message}
+        </div>
+      )}
+      <form onSubmit={handleSubmit}>
+        <input className="form-control mb-2" name="prenom" value={form.prenom} disabled={!peutModifier} onChange={handleChange} />
+        <input className="form-control mb-2" name="nom" value={form.nom} disabled={!peutModifier} onChange={handleChange} />
+        <input className="form-control mb-2" name="email" value={form.email} disabled={!peutModifier} onChange={handleChange} />
+        <input className="form-control mb-2" name="adresse" value={form.adresse} disabled={!peutModifier} onChange={handleChange} />
+        <input className="form-control mb-3" name="telephone" value={form.telephone} disabled={!peutModifier} onChange={handleChange} />
+
+        {peutModifier && (
+          <button className="btn btn-success" type="submit">
+            Enregistrer les modifications
+          </button>
+        )}
+      </form>
     </div>
   )
 }
@@ -733,12 +799,20 @@ function Navbar() {
 
         <div className="ms-auto d-flex gap-2 align-items-center">
           {utilisateur && (
-            <span className="text-white ms-2">
+            <div className="text-white me-2">
               {capitalize(utilisateur.nom) + " " + capitalize(utilisateur.prenom)}
               {utilisateur.role === "admin" ? " (Administrateur)" : ""}
-            </span>
+            </div>
           )}
 
+          {utilisateur && (
+            <button
+              className="btn btn-outline-light btn-sm"
+              onClick={() => navigate("/utilisateur/" + utilisateur.id)}
+            >
+              Mon profil
+            </button>
+          )}
           {utilisateur && utilisateur.role === "admin" && (
             <div className="d-flex gap-2">
               <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/ajouter")}>
@@ -812,6 +886,9 @@ function renderRoute() {
     route = React.createElement(renderCartPage, null)
   } else if (path === "/admin/utilisateurs") {
     route = React.createElement(renderUserManagePage, null)
+  } else if (path.startsWith("/utilisateur/")) {
+    const id = path.split("/")[2]
+    route = React.createElement(renderUserProfilePage, { id: id })
   } else {
     route = React.createElement("h2", null, "Page introuvable")
   }
@@ -963,6 +1040,15 @@ function findAll(callback) {
   db.all("SELECT * FROM utilisateurs ORDER BY role ASC, nom ASC, prenom ASC", [], (err, rows) => callback(err, rows))
 }
 
+function update(id, data, callback) {
+  const { prenom, nom, email, adresse, telephone } = data
+  db.run(
+    `UPDATE utilisateurs SET prenom = ?, nom = ?, email = ?, adresse = ?, telephone = ? WHERE id = ?`,
+    [prenom, nom, email, adresse, telephone, id],
+    callback
+  )
+}
+
 function remove(id, callback) {
   db.run("DELETE FROM utilisateurs WHERE id = ?", [id], (err) => callback(err))
 }
@@ -971,7 +1057,8 @@ module.exports = {
   findByEmail,
   createUser,
   findAll,
-  remove
+  remove,
+  update
 }
 
 
@@ -987,6 +1074,16 @@ router.get("/utilisateurs", (req, res) => {
   userModel.findAll((err, users) => {
     if (err) return res.status(500).json({ error: "Erreur lecture utilisateurs" })
     res.json(users)
+  })
+})
+router.put("/utilisateurs/:id", (req, res) => {
+  const id = req.params.id
+  const { prenom, nom, email, adresse, telephone } = req.body
+
+  const db = require("../models/userModel")
+  db.update(id, { prenom, nom, email, adresse, telephone }, (err) => {
+    if (err) return res.status(500).json({ error: "Erreur mise à jour utilisateur" })
+    res.json({ message: "Mise à jour effectuée" })
   })
 })
 
