@@ -125,39 +125,32 @@ module.exports = {
 const orderModel = require("../models/orderModel");
 const userModel = require("../models/userModel");
 
-function createOrder(userId, items, totalPrice, status, callback) {
-  const now = new Date().toISOString();
-  console.log("🎯 Requête POST /api/orders reçue !");
-  console.log("→ createOrder - userId:", userId, "total:", totalPrice, "items:", items);
-
-  db.run(
-    "INSERT INTO orders (user_id, total_price, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-    [userId, totalPrice, status, now, now],
-    function(err) {
-      if (err) {
-        console.error("✖ Erreur insert order:", err);
-        callback(err);
-      } else {
-        const orderId = this.lastID;
-        console.log("✔ Order insérée ID:", orderId);
-        insertOrderItems(orderId, items, callback);
-      }
+function createOrder(req, res) {
+  const { utilisateur, items } = req.body;
+  if (!utilisateur || !items || items.length === 0) {
+    return res.status(400).json({ message: "Données manquantes pour la commande" });
+  }
+  // Calculer le total de la commande
+  const totalPrice = items.reduce((acc, item) => acc + item.prix * (item.quantite || 1), 0);
+  orderModel.createOrder(utilisateur.id, items, totalPrice, "En cours", function(err, orderId) {
+    if (err) {
+      return res.status(500).json({ message: "Erreur lors de la création de la commande", error: err });
     }
-  );
+    res.status(201).json({ message: "Commande créée avec succès", orderId: orderId });
+  });
 }
 
 function listOrders(req, res) {
-  // On récupère les informations utilisateur depuis req.query
   const userId = req.query.userId;
   const role = req.query.role;
   if (!userId || !role) {
     return res.status(401).json({ message: "Utilisateur non connecté" });
   }
-
   const isAdmin = (role === "admin");
-
-  orderModel.getOrdersForUser(userId, isAdmin, function(err, orders) {
+  // Conversion de userId en entier
+  orderModel.getOrdersForUser(parseInt(userId, 10), isAdmin, function(err, orders) {
     if (err) {
+      console.error("Erreur dans getOrdersForUser :", err);
       return res.status(500).json({ message: "Erreur lecture commandes", error: err });
     }
     res.json(orders);
@@ -165,12 +158,10 @@ function listOrders(req, res) {
 }
 
 function listOrderItems(req, res) {
-  // Récupère les items d’une commande
   const orderId = req.params.id;
   if (!orderId) {
     return res.status(400).json({ message: "Paramètre manquant" });
   }
-
   orderModel.getOrderItems(orderId, function(err, items) {
     if (err) {
       return res.status(500).json({ message: "Erreur lecture items", error: err });
@@ -344,6 +335,8 @@ function renderPlantShowPage({ id }) {
 // PagePanier
 function renderCartPage() {
   const [items, setItems] = useState([])
+  const [message, setMessage] = useState(null)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem("panier")) || []
@@ -378,44 +371,75 @@ function renderCartPage() {
     const panier = JSON.parse(localStorage.getItem("panier")) || [];
     const utilisateur = JSON.parse(localStorage.getItem("utilisateur"));
 
-    console.log("Utilisateur :", utilisateur);
-    console.log("Panier :", panier);
-
     if (!utilisateur) {
-      alert("Vous devez être connecté pour passer une commande.");
+      setError("Vous devez être connecté pour passer une commande.");
       return;
     }
 
-    fetch("/api/commandes", {
-    // fetch("/api/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        utilisateur: utilisateur,
-        items: panier
+    // Vérifier le stock pour chaque article du panier
+    Promise.all(
+      panier.map(item => {
+        return fetch("/api/plantes/" + item.id)
+          .then(res => res.json())
+          .then(plante => {
+            // Si la quantité demandée dépasse le stock, on renvoie une erreur
+            if (item.quantite > plante.stock) {
+              return { ...item, stockDispo: plante.stock, erreur: true };
+            } else {
+              return { ...item, stockDispo: plante.stock, erreur: false };
+            }
+          });
       })
-    })
-      .then(function(res) {
-        console.log("Réponse brute fetch :", res);
+    )
+    .then(results => {
+      const itemsAvecErreur = results.filter(item => item.erreur);
+      if (itemsAvecErreur.length > 0) {
+        // Pour chaque article en erreur, on ajuste la quantité au stock disponible
+        results.forEach(item => {
+          if (item.erreur) {
+            item.quantite = item.stockDispo;
+          }
+        });
+        // Mettre à jour le panier dans le localStorage et l'état du composant
+        localStorage.setItem("panier", JSON.stringify(results));
+        setItems(results);
+        const noms = itemsAvecErreur.map(item => item.nom).join(", ");
+        setError("La quantité de " + noms + " a été ajustée au stock disponible.");
+        return; // Annuler la soumission de la commande
+      }
+
+      // Tout est en ordre, procéder à la création de la commande
+      const total = results.reduce((acc, item) => acc + item.prix * (item.quantite || 1), 0);
+      fetch("/api/commandes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          utilisateur: utilisateur,
+          items: results
+        })
+      })
+      .then(res => {
         if (!res.ok) {
           return res.json().then(err => {
-            console.error("Erreur serveur :", err);
             throw new Error(err.message || "Erreur serveur");
           });
         }
         return res.json();
       })
-      .then(function(data) {
-        console.log("Commande créée avec succès :", data);
-        alert("Commande validée (ID " + data.orderId + ")");
+      .then(data => {
+        setMessage("Commande validée (ID " + data.orderId + ")");
         localStorage.removeItem("panier");
-        if (typeof setItems === "function") setItems([]);
-        if (typeof updatePanierCount === "function") updatePanierCount();
+        setItems([]);
+        updatePanierCount();
+        navigate("/commandes");
       })
-      .catch(function(err) {
-        console.error("Erreur JS dans valider():", err);
-        alert("Erreur lors de la validation de la commande : " + err.message);
+      .catch(err => {
+        setError("Erreur lors de la validation de la commande : " + err.message);
       });
+    })
+    .catch(err => {
+      setError("Erreur lors de la vérification du stock : " + err.message);
+    });
   }
 
   const total = items.reduce((acc, p) => acc + p.prix * (p.quantite || 1), 0)
@@ -431,6 +455,16 @@ function renderCartPage() {
   return (
     <div className="mt-4">
       <h2 className="mb-3">Mon panier</h2>
+      {message && (
+        <div className="alert alert-success" role="alert">
+          {message}
+        </div>
+      )}
+      {error && (
+        <div className="alert alert-danger" role="alert">
+          {error}
+        </div>
+      )}
       <ul className="list-group mb-4">
         {items.map((item, i) => (
           <li
@@ -469,23 +503,26 @@ function renderCartPage() {
 // Page commandes
 function renderOrderListPage() {
   const [orders, setOrders] = React.useState([]);
+  const [error, setError] = React.useState(null);
+  const [success, setSuccess] = React.useState(null);
   const utilisateur = JSON.parse(localStorage.getItem("utilisateur"));
 
   React.useEffect(function() {
     if (!utilisateur) {
-      alert("Vous devez être connecté pour voir vos commandes.");
-      navigate("/");
+      setError("Vous devez être connecté pour voir vos commandes.");
+      navigate("/")
       return;
     }
 
-    // Passage de userId et role en query string
-    fetch("/api/orders?userId=" + utilisateur.id + "&role=" + utilisateur.role, {
+    fetch("/api/commandes?userId=" + utilisateur.id + "&role=" + utilisateur.role, {
       method: "GET",
       headers: { "Content-Type": "application/json" }
     })
       .then(function(res) { return res.json(); })
       .then(function(data) { setOrders(data); })
-      .catch(function() { alert("Erreur lors de la récupération des commandes."); });
+      .catch(function() {
+        setError("Erreur lors de la récupération des commandes.");
+      });
   }, []);
 
   if (!utilisateur) {
@@ -499,6 +536,11 @@ function renderOrderListPage() {
   return (
     <div className="mt-4">
       <h2>Mes commandes</h2>
+      {error && (
+      <div className="alert alert-danger" role="alert">
+        {error}
+      </div>
+      )}
       {orders.map(function(order) {
         return (
           <div className="card mb-3" key={order.id}>
@@ -527,13 +569,15 @@ function afficherDetailCommande(orderId) {
 
 function renderOrderDetailPage({ orderId }) {
   const [items, setItems] = React.useState([]);
+  const [message, setMessage] = React.useState(null)
+  const [error, setError] = React.useState(null)
   const utilisateur = JSON.parse(localStorage.getItem("utilisateur"));
 
   React.useEffect(() => {
     fetch("/api/commandes/" + orderId + "/items")
       .then(res => res.json())
       .then(setItems)
-      .catch(() => alert("Erreur lors de la récupération des items."));
+      .catch(() => setError("Erreur lors de la validation de la commande : " + err.message));
   }, [orderId]);
 
   if (!utilisateur) {
@@ -547,6 +591,16 @@ function renderOrderDetailPage({ orderId }) {
   return (
     <div className="mt-4">
       <h2>Détails de la commande #{orderId}</h2>
+      {message && (
+        <div className="alert alert-success" role="alert">
+          {message}
+        </div>
+      )}
+      {error && (
+        <div className="alert alert-danger" role="alert">
+          {error}
+        </div>
+      )}
       <ul className="list-group">
         {items.map((item, i) => (
           <li key={i} className="list-group-item d-flex justify-content-between">
@@ -1151,7 +1205,7 @@ app.use(express.static(path.join(__dirname, "public"))) // Pour servir les fichi
 // ----------------------------
 app.use("/api/plantes", planteRoutes) // Routes pour la ressource "plantes"
 app.use("/api", authRoutes) // Routes pour l'authentification et les utilisateurs
-app.use("/api/orders", orderRoutes) // Routes pour les commandes
+app.use("/api/commandes", orderRoutes) // Routes pour les commandes
 
 // ----------------------------
 // Catch-all pour React (SPA)

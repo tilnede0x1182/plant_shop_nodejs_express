@@ -179,58 +179,228 @@ function renderCartPage() {
     updatePanierCount()
   }
 
-  function handleQuantiteBlur(plante, quantite) {
-    fetch("/api/plantes/" + plante.id, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...plante, stock: quantite })
-    }).then(() => console.log("Quantité mise à jour"))
-  }
+  // function valider() {
+  //   const panier = JSON.parse(localStorage.getItem("panier")) || [];
+  //   const utilisateur = JSON.parse(localStorage.getItem("utilisateur"));
+
+  //   if (!utilisateur) {
+  //     setError("Vous devez être connecté pour passer une commande.");
+  //     return;
+  //   }
+
+  //   // Vérifier le stock pour chaque article du panier
+  //   Promise.all(
+  //     panier.map(item => {
+  //       return fetch("/api/plantes/" + item.id)
+  //         .then(res => res.json())
+  //         .then(plante => {
+  //           // Si la quantité demandée dépasse le stock, on renvoie une erreur
+  //           if (item.quantite > plante.stock) {
+  //             return { ...item, stockDispo: plante.stock, erreur: true };
+  //           } else {
+  //             return { ...item, stockDispo: plante.stock, erreur: false };
+  //           }
+  //         });
+  //     })
+  //   )
+  //   .then(results => {
+  //     const itemsAvecErreur = results.filter(item => item.erreur);
+  //     if (itemsAvecErreur.length > 0) {
+  //       // Pour chaque article en erreur, on ajuste la quantité au stock disponible
+  //       results.forEach(item => {
+  //         if (item.erreur) {
+  //           item.quantite = item.stockDispo;
+  //         }
+  //       });
+  //       // Mettre à jour le panier dans le localStorage et l'état du composant
+  //       localStorage.setItem("panier", JSON.stringify(results));
+  //       setItems(results);
+  //       const noms = itemsAvecErreur.map(item => item.nom).join(", ");
+  //       setError("La quantité de " + noms + " a été ajustée au stock disponible.");
+  //       return; // Annuler la soumission de la commande
+  //     }
+
+  //     // Tout est en ordre, procéder à la création de la commande
+  //     const total = results.reduce((acc, item) => acc + item.prix * (item.quantite || 1), 0);
+  //     fetch("/api/commandes", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({
+  //         utilisateur: utilisateur,
+  //         items: results
+  //       })
+  //     })
+  //     .then(res => {
+  //       if (!res.ok) {
+  //         return res.json().then(err => {
+  //           throw new Error(err.message || "Erreur serveur");
+  //         });
+  //       }
+  //       return res.json();
+  //     })
+  //     .then(data => {
+  //       setMessage("Commande validée (ID " + data.orderId + ")");
+  //       localStorage.removeItem("panier");
+  //       setItems([]);
+  //       updatePanierCount();
+  //       navigate("/commandes");
+  //     })
+  //     .catch(err => {
+  //       setError("Erreur lors de la validation de la commande : " + err.message);
+  //     });
+  //   })
+  //   .catch(err => {
+  //     setError("Erreur lors de la vérification du stock : " + err.message);
+  //   });
+  // }
+
+  // function valider() {
+  //   const panier = JSON.parse(localStorage.getItem("panier")) || [];
+  //   const utilisateur = JSON.parse(localStorage.getItem("utilisateur"));
+
+  //   if (!utilisateur) {
+  //     setError("Vous devez être connecté pour passer une commande.");
+  //     return;
+  //   }
+
+  //   // Pour chaque article, on récupère le stock réel et on compare la quantité demandée.
+  //   Promise.all(
+  //     panier.map(item =>
+  //       fetch("/api/plantes/" + item.id)
+  //         .then(res => res.json())
+  //         .then(plante => {
+  //           if (item.quantite > plante.stock) {
+  //             // Marquer l'article en erreur et enregistrer le stock disponible
+  //             return { ...item, erreur: true, stockDispo: plante.stock };
+  //           } else {
+  //             return { ...item, erreur: false, stockDispo: plante.stock };
+  //           }
+  //         })
+  //     )
+  //   )
+  //   .then(results => {
+  //     // Si un ou plusieurs articles dépassent le stock, on ajuste leur quantité
+  //     const itemsAvecErreur = results.filter(item => item.erreur);
+  //     if (itemsAvecErreur.length > 0) {
+  //       const updatedPanier = results.map(item =>
+  //         item.erreur ? { ...item, quantite: item.stockDispo } : item
+  //       );
+  //       localStorage.setItem("panier", JSON.stringify(updatedPanier));
+  //       setItems(updatedPanier);
+  //       const noms = itemsAvecErreur.map(item => item.nom).join(", ");
+  //       setError("La quantité de " + noms + " a été ajustée au stock disponible.");
+  //       return; // On arrête la validation pour que l'utilisateur constate la modification
+  //     }
+
+  //     // Tout est en ordre, on calcule le total et on soumet la commande
+  //     const total = results.reduce((acc, item) => acc + item.prix * (item.quantite || 1), 0);
+  //     fetch("/api/commandes", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({
+  //         utilisateur: utilisateur,
+  //         items: results,
+  //         total: total
+  //       })
+  //     })
+  //       .then(res => {
+  //         if (!res.ok) {
+  //           return res.json().then(err => {
+  //             throw new Error(err.message || "Erreur serveur");
+  //           });
+  //         }
+  //         return res.json();
+  //       })
+  //       .then(data => {
+  //         setMessage("Commande validée (ID " + data.orderId + ")");
+  //         localStorage.removeItem("panier");
+  //         setItems([]);
+  //         updatePanierCount();
+  //         navigate("/commandes");
+  //       })
+  //       .catch(err => {
+  //         setError("Erreur lors de la validation de la commande : " + err.message);
+  //       });
+  //   })
+  //   .catch(err => {
+  //     setError("Erreur lors de la vérification du stock : " + err.message);
+  //   });
+  // }
 
   function valider() {
     const panier = JSON.parse(localStorage.getItem("panier")) || [];
     const utilisateur = JSON.parse(localStorage.getItem("utilisateur"));
 
-    console.log("Utilisateur :", utilisateur);
-    console.log("Panier :", panier);
-
-    // S'il n'est pas connecté, on met un message d'erreur
     if (!utilisateur) {
       setError("Vous devez être connecté pour passer une commande.");
       return;
     }
 
-    fetch("/api/commandes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        utilisateur: utilisateur,
-        items: panier
+    // Pour chaque article, récupérer le stock réel et comparer avec la quantité demandée.
+    Promise.all(
+      panier.map(item =>
+        fetch("/api/plantes/" + item.id)
+          .then(res => res.json())
+          .then(plante => {
+            // Si le stock est nul ou insuffisant, on renvoie un flag d'erreur
+            if (plante.stock <= 0) {
+              return { ...item, erreur: true, stockDispo: 0 };
+            } else if (item.quantite > plante.stock) {
+              return { ...item, erreur: true, stockDispo: plante.stock };
+            } else {
+              return { ...item, erreur: false, stockDispo: plante.stock };
+            }
+          })
+      )
+    )
+    .then(results => {
+      // Vérifier si un ou plusieurs articles présentent une erreur de stock
+      const itemsAvecErreur = results.filter(item => item.erreur);
+      if (itemsAvecErreur.length > 0) {
+        // Pour chaque article en erreur, ajuster la quantité au stock disponible (pouvant être 0)
+        const updatedPanier = results.map(item =>
+          item.erreur ? { ...item, quantite: item.stockDispo } : item
+        );
+        localStorage.setItem("panier", JSON.stringify(updatedPanier));
+        setItems(updatedPanier);
+        const noms = itemsAvecErreur.map(item => item.nom).join(", ");
+        setError("La quantité de " + noms + " a été ajustée au stock disponible.");
+        return; // On arrête la soumission pour que l'utilisateur prenne connaissance du problème
+      }
+
+      // Si tout est correct, calculer le total et soumettre la commande
+      const total = results.reduce((acc, item) => acc + item.prix * (item.quantite || 1), 0);
+      fetch("/api/commandes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          utilisateur: utilisateur,
+          items: results,
+          total: total
+        })
       })
+        .then(res => {
+          if (!res.ok) {
+            return res.json().then(err => {
+              throw new Error(err.message || "Erreur serveur");
+            });
+          }
+          return res.json();
+        })
+        .then(data => {
+          setMessage("Commande validée (ID " + data.orderId + ")");
+          localStorage.removeItem("panier");
+          setItems([]);
+          updatePanierCount();
+          navigate("/commandes");
+        })
+        .catch(err => {
+          setError("Erreur lors de la validation de la commande : " + err.message);
+        });
     })
-      .then(function(res) {
-        console.log("Réponse brute fetch :", res);
-        if (!res.ok) {
-          return res.json().then(err => {
-            console.error("Erreur serveur :", err);
-            throw new Error(err.message || "Erreur serveur");
-          });
-        }
-        return res.json();
-      })
-      .then(function(data) {
-        console.log("Commande créée avec succès :", data);
-        setMessage("Commande validée (ID " + data.orderId + ")");
-        // Nettoyer le panier
-        localStorage.removeItem("panier");
-        if (typeof setItems === "function") setItems([]);
-        if (typeof updatePanierCount === "function") updatePanierCount();
-        navigate("/commandes")
-      })
-      .catch(function(err) {
-        console.error("Erreur JS dans valider():", err);
-        setError("Erreur lors de la validation de la commande : " + err.message);
-      });
+    .catch(err => {
+      setError("Erreur lors de la vérification du stock : " + err.message);
+    });
   }
 
   const total = items.reduce((acc, p) => acc + p.prix * (p.quantite || 1), 0)
@@ -269,7 +439,6 @@ function renderCartPage() {
               value={item.quantite || 1}
               min="1"
               onChange={(e) => handleQuantiteChange(e, i)}
-              onBlur={() => handleQuantiteBlur(item, item.quantite || 1)}
             />
             <button
               className="btn btn-sm btn-outline-danger"
