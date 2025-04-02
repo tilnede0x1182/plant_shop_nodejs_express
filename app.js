@@ -5,6 +5,7 @@ const express = require("express")
 const path = require("path")
 const planteRoutes = require("./routes/planteRoutes")
 const authRoutes = require("./routes/authRoutes")
+const orderRoutes = require("./routes/orderRoutes")
 
 // ----------------------------
 // Initialisation de l'application
@@ -23,6 +24,7 @@ app.use(express.static(path.join(__dirname, "public"))) // Pour servir les fichi
 // ----------------------------
 app.use("/api/plantes", planteRoutes) // Routes pour la ressource "plantes"
 app.use("/api", authRoutes) // Routes pour l'authentification et les utilisateurs
+app.use("/api/commandes", orderRoutes) // Routes pour les commandes
 
 // ----------------------------
 // Catch-all pour React (SPA)

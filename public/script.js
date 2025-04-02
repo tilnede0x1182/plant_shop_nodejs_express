@@ -155,6 +155,8 @@ function renderPlantShowPage({ id }) {
 // PagePanier
 function renderCartPage() {
   const [items, setItems] = useState([])
+  const [message, setMessage] = useState(null)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem("panier")) || []
@@ -186,10 +188,49 @@ function renderCartPage() {
   }
 
   function valider() {
-    alert("Panier validé !")
-    localStorage.removeItem("panier")
-    setItems([])
-    updatePanierCount()
+    const panier = JSON.parse(localStorage.getItem("panier")) || [];
+    const utilisateur = JSON.parse(localStorage.getItem("utilisateur"));
+
+    console.log("Utilisateur :", utilisateur);
+    console.log("Panier :", panier);
+
+    // S'il n'est pas connecté, on met un message d'erreur
+    if (!utilisateur) {
+      setError("Vous devez être connecté pour passer une commande.");
+      return;
+    }
+
+    fetch("/api/commandes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        utilisateur: utilisateur,
+        items: panier
+      })
+    })
+      .then(function(res) {
+        console.log("Réponse brute fetch :", res);
+        if (!res.ok) {
+          return res.json().then(err => {
+            console.error("Erreur serveur :", err);
+            throw new Error(err.message || "Erreur serveur");
+          });
+        }
+        return res.json();
+      })
+      .then(function(data) {
+        console.log("Commande créée avec succès :", data);
+        setMessage("Commande validée (ID " + data.orderId + ")");
+        // Nettoyer le panier
+        localStorage.removeItem("panier");
+        if (typeof setItems === "function") setItems([]);
+        if (typeof updatePanierCount === "function") updatePanierCount();
+        navigate("/commandes")
+      })
+      .catch(function(err) {
+        console.error("Erreur JS dans valider():", err);
+        setError("Erreur lors de la validation de la commande : " + err.message);
+      });
   }
 
   const total = items.reduce((acc, p) => acc + p.prix * (p.quantite || 1), 0)
@@ -205,6 +246,16 @@ function renderCartPage() {
   return (
     <div className="mt-4">
       <h2 className="mb-3">Mon panier</h2>
+      {message && (
+        <div className="alert alert-success" role="alert">
+          {message}
+        </div>
+      )}
+      {error && (
+        <div className="alert alert-danger" role="alert">
+          {error}
+        </div>
+      )}
       <ul className="list-group mb-4">
         {items.map((item, i) => (
           <li
@@ -239,6 +290,123 @@ function renderCartPage() {
     </div>
   )
 }
+
+// Page commandes
+function renderOrderListPage() {
+  const [orders, setOrders] = React.useState([]);
+  const [error, setError] = React.useState(null);
+  const [success, setSuccess] = React.useState(null);
+  const utilisateur = JSON.parse(localStorage.getItem("utilisateur"));
+
+  React.useEffect(function() {
+    if (!utilisateur) {
+      setError("Vous devez être connecté pour voir vos commandes.");
+      navigate("/")
+      return;
+    }
+
+    fetch("/api/commandes?userId=" + utilisateur.id + "&role=" + utilisateur.role, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" }
+    })
+      .then(function(res) { return res.json(); })
+      .then(function(data) { setOrders(data); })
+      .catch(function() {
+        setError("Erreur lors de la récupération des commandes.");
+      });
+  }, []);
+
+  if (!utilisateur) {
+    return <p>Veuillez vous connecter.</p>;
+  }
+
+  if (orders.length === 0) {
+    return <p>Aucune commande pour l’instant.</p>;
+  }
+
+  return (
+    <div className="mt-4">
+      <h2>Mes commandes</h2>
+      {error && (
+      <div className="alert alert-danger" role="alert">
+        {error}
+      </div>
+      )}
+      {orders.map(function(order) {
+        return (
+          <div className="card mb-3" key={order.id}>
+            <div className="card-body">
+              <h5 className="card-title">Commande #{order.id}</h5>
+              <p>Total : {order.total_price} €</p>
+              <p>Statut : {order.status}</p>
+              <p>Passée le : {new Date(order.created_at).toLocaleString()}</p>
+              <button
+                className="btn btn-sm btn-info"
+                onClick={function() { afficherDetailCommande(order.id); }}>
+                Voir le détail
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function afficherDetailCommande(orderId) {
+  // Exemple : rediriger vers /commande/:id
+  navigate("/commande/" + orderId);
+}
+
+function renderOrderDetailPage({ orderId }) {
+  const [items, setItems] = React.useState([]);
+  const [message, setMessage] = React.useState(null)
+  const [error, setError] = React.useState(null)
+  const utilisateur = JSON.parse(localStorage.getItem("utilisateur"));
+
+  React.useEffect(() => {
+    fetch("/api/commandes/" + orderId + "/items")
+      .then(res => res.json())
+      .then(setItems)
+      .catch(() => setError("Erreur lors de la validation de la commande : " + err.message));
+  }, [orderId]);
+
+  if (!utilisateur) {
+    return <p>Veuillez vous connecter.</p>;
+  }
+
+  if (items.length === 0) {
+    return <p>Aucun item dans cette commande.</p>;
+  }
+
+  return (
+    <div className="mt-4">
+      <h2>Détails de la commande #{orderId}</h2>
+      {message && (
+        <div className="alert alert-success" role="alert">
+          {message}
+        </div>
+      )}
+      {error && (
+        <div className="alert alert-danger" role="alert">
+          {error}
+        </div>
+      )}
+      <ul className="list-group">
+        {items.map((item, i) => (
+          <li key={i} className="list-group-item d-flex justify-content-between">
+            <span>Plante ID {item.plante_id}</span>
+            <span>Quantité : {item.quantite}</span>
+          </li>
+        ))}
+      </ul>
+      <button className="btn btn-secondary mt-3" onClick={() => navigate("/commandes")}>
+        Retour aux commandes
+      </button>
+    </div>
+  );
+}
+
 
 // Inscription
 function renderRegisterPage() {
@@ -711,6 +879,12 @@ function Navbar() {
             Panier (<span id="panier-count">0</span>)
           </button>
 
+          {utilisateur && (
+            <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/commandes")}>
+              Mes commandes
+            </button>
+          )}
+
           {!utilisateur && (
             <div className="d-flex gap-2">
               <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/inscription")}>
@@ -767,6 +941,11 @@ function renderRoute() {
     route = React.createElement(renderLoginPage, null)
   } else if (path === "/panier") {
     route = React.createElement(renderCartPage, null)
+  }  else if (path === "/commandes") {
+    route = React.createElement(renderOrderListPage, null)
+  } else if (path.startsWith("/commande/")) {
+    const orderId = path.split("/")[2]
+    route = React.createElement(renderOrderDetailPage, { orderId: orderId })
   } else if (path === "/admin/utilisateurs") {
     route = React.createElement(renderUserManagePage, null)
   } else if (path.startsWith("/utilisateur/")) {

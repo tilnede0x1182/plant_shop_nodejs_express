@@ -22,5 +22,23 @@ CREATE TABLE IF NOT EXISTS utilisateurs (
   actif INTEGER NOT NULL DEFAULT 1
 );
 
+CREATE TABLE IF NOT EXISTS orders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  total_price INTEGER NOT NULL,
+  status TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS order_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_id INTEGER NOT NULL,
+  plante_id INTEGER NOT NULL,
+  quantite INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
 INSERT INTO plantes (id, nom, description, prix, categorie, stock) VALUES
 ('1', 'Ficus', 'Plante verte d’intérieur', 20, 'intérieur', 5);

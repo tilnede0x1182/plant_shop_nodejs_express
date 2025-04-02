@@ -1,4 +1,4 @@
-"controllers/planteController.js"
+"+REL_PATH+"
 const model = require("../models/planteModel")
 
 function getAll(req, res) {
@@ -53,7 +53,7 @@ module.exports = {
 }
 
 
-"controllers/authController.js"
+"+REL_PATH+"
 const bcrypt = require('bcryptjs')
 const userModel = require("../models/userModel")
 
@@ -121,7 +121,72 @@ module.exports = {
 }
 
 
-"public/script.js"
+"+REL_PATH+"
+const orderModel = require("../models/orderModel");
+const userModel = require("../models/userModel");
+
+function createOrder(userId, items, totalPrice, status, callback) {
+  const now = new Date().toISOString();
+  console.log("🎯 Requête POST /api/orders reçue !");
+  console.log("→ createOrder - userId:", userId, "total:", totalPrice, "items:", items);
+
+  db.run(
+    "INSERT INTO orders (user_id, total_price, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+    [userId, totalPrice, status, now, now],
+    function(err) {
+      if (err) {
+        console.error("✖ Erreur insert order:", err);
+        callback(err);
+      } else {
+        const orderId = this.lastID;
+        console.log("✔ Order insérée ID:", orderId);
+        insertOrderItems(orderId, items, callback);
+      }
+    }
+  );
+}
+
+function listOrders(req, res) {
+  // On récupère les informations utilisateur depuis req.query
+  const userId = req.query.userId;
+  const role = req.query.role;
+  if (!userId || !role) {
+    return res.status(401).json({ message: "Utilisateur non connecté" });
+  }
+
+  const isAdmin = (role === "admin");
+
+  orderModel.getOrdersForUser(userId, isAdmin, function(err, orders) {
+    if (err) {
+      return res.status(500).json({ message: "Erreur lecture commandes", error: err });
+    }
+    res.json(orders);
+  });
+}
+
+function listOrderItems(req, res) {
+  // Récupère les items d’une commande
+  const orderId = req.params.id;
+  if (!orderId) {
+    return res.status(400).json({ message: "Paramètre manquant" });
+  }
+
+  orderModel.getOrderItems(orderId, function(err, items) {
+    if (err) {
+      return res.status(500).json({ message: "Erreur lecture items", error: err });
+    }
+    res.json(items);
+  });
+}
+
+module.exports = {
+  createOrder,
+  listOrders,
+  listOrderItems
+};
+
+
+"+REL_PATH+"
 // ------------------- Imports et hooks ---------------------
 const { useState, useEffect } = React
 
@@ -310,10 +375,47 @@ function renderCartPage() {
   }
 
   function valider() {
-    alert("Panier validé !")
-    localStorage.removeItem("panier")
-    setItems([])
-    updatePanierCount()
+    const panier = JSON.parse(localStorage.getItem("panier")) || [];
+    const utilisateur = JSON.parse(localStorage.getItem("utilisateur"));
+
+    console.log("Utilisateur :", utilisateur);
+    console.log("Panier :", panier);
+
+    if (!utilisateur) {
+      alert("Vous devez être connecté pour passer une commande.");
+      return;
+    }
+
+    fetch("/api/commandes", {
+    // fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        utilisateur: utilisateur,
+        items: panier
+      })
+    })
+      .then(function(res) {
+        console.log("Réponse brute fetch :", res);
+        if (!res.ok) {
+          return res.json().then(err => {
+            console.error("Erreur serveur :", err);
+            throw new Error(err.message || "Erreur serveur");
+          });
+        }
+        return res.json();
+      })
+      .then(function(data) {
+        console.log("Commande créée avec succès :", data);
+        alert("Commande validée (ID " + data.orderId + ")");
+        localStorage.removeItem("panier");
+        if (typeof setItems === "function") setItems([]);
+        if (typeof updatePanierCount === "function") updatePanierCount();
+      })
+      .catch(function(err) {
+        console.error("Erreur JS dans valider():", err);
+        alert("Erreur lors de la validation de la commande : " + err.message);
+      });
   }
 
   const total = items.reduce((acc, p) => acc + p.prix * (p.quantite || 1), 0)
@@ -363,6 +465,103 @@ function renderCartPage() {
     </div>
   )
 }
+
+// Page commandes
+function renderOrderListPage() {
+  const [orders, setOrders] = React.useState([]);
+  const utilisateur = JSON.parse(localStorage.getItem("utilisateur"));
+
+  React.useEffect(function() {
+    if (!utilisateur) {
+      alert("Vous devez être connecté pour voir vos commandes.");
+      navigate("/");
+      return;
+    }
+
+    // Passage de userId et role en query string
+    fetch("/api/orders?userId=" + utilisateur.id + "&role=" + utilisateur.role, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" }
+    })
+      .then(function(res) { return res.json(); })
+      .then(function(data) { setOrders(data); })
+      .catch(function() { alert("Erreur lors de la récupération des commandes."); });
+  }, []);
+
+  if (!utilisateur) {
+    return <p>Veuillez vous connecter.</p>;
+  }
+
+  if (orders.length === 0) {
+    return <p>Aucune commande pour l’instant.</p>;
+  }
+
+  return (
+    <div className="mt-4">
+      <h2>Mes commandes</h2>
+      {orders.map(function(order) {
+        return (
+          <div className="card mb-3" key={order.id}>
+            <div className="card-body">
+              <h5 className="card-title">Commande #{order.id}</h5>
+              <p>Total : {order.total_price} €</p>
+              <p>Statut : {order.status}</p>
+              <p>Passée le : {new Date(order.created_at).toLocaleString()}</p>
+              <button
+                className="btn btn-sm btn-info"
+                onClick={function() { afficherDetailCommande(order.id); }}>
+                Voir le détail
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function afficherDetailCommande(orderId) {
+  // Exemple : rediriger vers /commande/:id
+  navigate("/commande/" + orderId);
+}
+
+function renderOrderDetailPage({ orderId }) {
+  const [items, setItems] = React.useState([]);
+  const utilisateur = JSON.parse(localStorage.getItem("utilisateur"));
+
+  React.useEffect(() => {
+    fetch("/api/commandes/" + orderId + "/items")
+      .then(res => res.json())
+      .then(setItems)
+      .catch(() => alert("Erreur lors de la récupération des items."));
+  }, [orderId]);
+
+  if (!utilisateur) {
+    return <p>Veuillez vous connecter.</p>;
+  }
+
+  if (items.length === 0) {
+    return <p>Aucun item dans cette commande.</p>;
+  }
+
+  return (
+    <div className="mt-4">
+      <h2>Détails de la commande #{orderId}</h2>
+      <ul className="list-group">
+        {items.map((item, i) => (
+          <li key={i} className="list-group-item d-flex justify-content-between">
+            <span>Plante ID {item.plante_id}</span>
+            <span>Quantité : {item.quantite}</span>
+          </li>
+        ))}
+      </ul>
+      <button className="btn btn-secondary mt-3" onClick={() => navigate("/commandes")}>
+        Retour aux commandes
+      </button>
+    </div>
+  );
+}
+
 
 // Inscription
 function renderRegisterPage() {
@@ -718,6 +917,13 @@ function renderUserProfilePage({ id }) {
       body: JSON.stringify(form)
     }).then(() => {
       setMessage("Les informations ont été mises à jour avec succès.")
+
+      const session = JSON.parse(localStorage.getItem("utilisateur"))
+      if (session && (session.id == id || session.role === "admin")) {
+        const updated = { ...session, ...form }
+        localStorage.setItem("utilisateur", JSON.stringify(updated))
+        window.dispatchEvent(new Event("utilisateurChange"))
+      }
     })
   }
 
@@ -828,6 +1034,12 @@ function Navbar() {
             Panier (<span id="panier-count">0</span>)
           </button>
 
+          {utilisateur && (
+            <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/commandes")}>
+              Mes commandes
+            </button>
+          )}
+
           {!utilisateur && (
             <div className="d-flex gap-2">
               <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/inscription")}>
@@ -884,6 +1096,11 @@ function renderRoute() {
     route = React.createElement(renderLoginPage, null)
   } else if (path === "/panier") {
     route = React.createElement(renderCartPage, null)
+  }  else if (path === "/commandes") {
+    route = React.createElement(renderOrderListPage, null)
+  } else if (path.startsWith("/commande/")) {
+    const orderId = path.split("/")[2]
+    route = React.createElement(renderOrderDetailPage, { orderId: orderId })
   } else if (path === "/admin/utilisateurs") {
     route = React.createElement(renderUserManagePage, null)
   } else if (path.startsWith("/utilisateur/")) {
@@ -907,7 +1124,7 @@ window.onload = renderRoute
 window.addEventListener("storage", () => updatePanierCount())
 
 
-"app.js"
+"+REL_PATH+"
 // ----------------------------
 // Import des modules
 // ----------------------------
@@ -915,6 +1132,7 @@ const express = require("express")
 const path = require("path")
 const planteRoutes = require("./routes/planteRoutes")
 const authRoutes = require("./routes/authRoutes")
+const orderRoutes = require("./routes/orderRoutes")
 
 // ----------------------------
 // Initialisation de l'application
@@ -933,6 +1151,7 @@ app.use(express.static(path.join(__dirname, "public"))) // Pour servir les fichi
 // ----------------------------
 app.use("/api/plantes", planteRoutes) // Routes pour la ressource "plantes"
 app.use("/api", authRoutes) // Routes pour l'authentification et les utilisateurs
+app.use("/api/orders", orderRoutes) // Routes pour les commandes
 
 // ----------------------------
 // Catch-all pour React (SPA)
@@ -950,7 +1169,7 @@ app.listen(PORT, () => {
 })
 
 
-"models/planteModel.js"
+"+REL_PATH+"
 const sqlite3 = require("sqlite3").verbose()
 const path = require("path")
 
@@ -1000,7 +1219,118 @@ module.exports = {
 }
 
 
-"models/userModel.js"
+"+REL_PATH+"
+const sqlite3 = require("sqlite3").verbose();
+const path = require("path");
+
+const dbPath = path.join(__dirname, "../db/plantes.db");
+const db = new sqlite3.Database(dbPath);
+
+// Création d'une commande
+function createOrder(userId, items, totalPrice, status, callback) {
+  const now = new Date().toISOString();
+  db.run(
+    "INSERT INTO orders (user_id, total_price, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+    [userId, totalPrice, status, now, now],
+    function(err) {
+      if (err) {
+        callback(err);
+      } else {
+        const orderId = this.lastID;
+        // Insertion de chaque item dans order_items
+        insertOrderItems(orderId, items, callback);
+      }
+    }
+  );
+}
+
+// Fonction interne pour insérer les items
+function insertOrderItems(orderId, items, callback) {
+  const now = new Date().toISOString();
+  let remaining = items.length;
+  let errorOccurred = false;
+
+  if (remaining === 0) {
+    return callback(null, orderId);
+  }
+
+  items.forEach(function(item) {
+    console.log("→ Insertion item:", item);
+    const stmt = `
+      INSERT INTO order_items (order_id, plante_id, quantite, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?)
+    `;
+    db.run(
+      stmt,
+      [orderId, item.id, item.quantite, now, now],
+      function(err) {
+        if (errorOccurred) return;
+        if (err) {
+          console.error("✖ Erreur insert item:", item, err);
+          errorOccurred = true;
+          return callback(err);
+        } else {
+          console.log("✔ Item inséré:", item.id, "quantité:", item.quantite);
+          decrementPlanteStock(item.id, item.quantite, function(err2) {
+            if (errorOccurred) return;
+            if (err2) {
+              console.error("✖ Erreur stock plante", item.id, ":", err2);
+              errorOccurred = true;
+              return callback(err2);
+            }
+            remaining -= 1;
+            if (remaining === 0) {
+              console.log("✔ Tous les items insérés pour commande ID", orderId);
+              callback(null, orderId);
+            }
+          });
+        }
+      }
+    );
+  });
+}
+
+// Fonction interne pour décrémenter le stock d’une plante
+function decrementPlanteStock(planteId, quantite, callback) {
+  const stmt = "UPDATE plantes SET stock = stock - ? WHERE id = ?";
+  db.run(stmt, [quantite, planteId], function(err) {
+    if (err) {
+      console.error("✖ Erreur stock plante id:", planteId, err);
+      return callback(err);
+    }
+    if (this.changes === 0) {
+      console.warn("⚠ Aucun stock modifié pour plante id:", planteId);
+      return callback(null); // ou return callback(new Error(...)) si vous voulez bloquer
+    }
+    console.log("✔ Stock décrémenté pour plante id:", planteId);
+    callback(null);
+  });
+}
+
+// Récupérer la liste des commandes pour un user donné (ou toutes si admin)
+function getOrdersForUser(userId, isAdmin, callback) {
+  if (isAdmin) {
+    // L’admin voit toutes les commandes
+    db.all("SELECT * FROM orders ORDER BY created_at DESC", [], callback);
+  } else {
+    // Un simple utilisateur ne voit que ses commandes
+    db.all("SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC", [userId], callback);
+  }
+}
+
+// Récupérer les items d’une commande donnée
+function getOrderItems(orderId, callback) {
+  db.all("SELECT * FROM order_items WHERE order_id = ?", [orderId], callback);
+}
+
+module.exports = {
+  createOrder,
+  getOrdersForUser,
+  getOrderItems
+};
+
+
+"+REL_PATH+"
 const sqlite3 = require("sqlite3").verbose()
 const path = require("path")
 
@@ -1062,7 +1392,24 @@ module.exports = {
 }
 
 
-"routes/authRoutes.js"
+"+REL_PATH+"
+const express = require("express");
+const router = express.Router();
+const orderController = require("../controllers/orderController");
+
+// POST pour créer une commande
+router.post("/", orderController.createOrder);
+
+// GET pour voir la liste des commandes (en passant userId et role en query string)
+router.get("/", orderController.listOrders);
+
+// GET pour voir les items d’une commande donnée
+router.get("/:id/items", orderController.listOrderItems);
+
+module.exports = router;
+
+
+"+REL_PATH+"
 const express = require("express")
 const router = express.Router()
 const authController = require("../controllers/authController")
@@ -1097,7 +1444,7 @@ router.delete("/utilisateurs/:id", (req, res) => {
 module.exports = router
 
 
-"routes/planteRoutes.js"
+"+REL_PATH+"
 const express = require("express")
 const router = express.Router()
 const controller = require("../controllers/planteController")
@@ -1111,7 +1458,54 @@ router.delete("/:id", controller.remove)
 module.exports = router
 
 
-"db/seed.js"
+"+REL_PATH+"
+DROP TABLE IF EXISTS plantes;
+
+CREATE TABLE plantes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nom TEXT NOT NULL,
+  description TEXT,
+  prix INTEGER NOT NULL,
+  categorie TEXT,
+  stock INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS utilisateurs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+	prenom TEXT NOT NULL,
+	nom TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  mot_de_passe TEXT NOT NULL,
+  role TEXT NOT NULL CHECK(role IN ('visiteur', 'user', 'admin')),
+  adresse TEXT,
+  telephone TEXT,
+  date_inscription TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  actif INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  total_price INTEGER NOT NULL,
+  status TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS order_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_id INTEGER NOT NULL,
+  plante_id INTEGER NOT NULL,
+  quantite INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+INSERT INTO plantes (id, nom, description, prix, categorie, stock) VALUES
+('1', 'Ficus', 'Plante verte d’intérieur', 20, 'intérieur', 5);
+
+
+"+REL_PATH+"
 // # Import des dépendances et initialisation
 const fs = require("fs")
 const sqlite3 = require("sqlite3").verbose()
@@ -1244,3 +1638,40 @@ async function main() {
 main()
 
 
+
+===== STRUCTURE DU PROJET =====
+/home/tilnede0x1182/code/tilnede0x1182/Personnel/2025/Entrainement/Javascript/plant_shop_nodejs_express
+├── app.js
+├── controllers
+│   ├── authController.js
+│   ├── orderController.js
+│   └── planteController.js
+├── data
+│   └── plantes.json
+├── db
+│   ├── init.sql
+│   ├── plantes.db
+│   └── seed.js
+├── dump_projet.sh
+├── models
+│   ├── orderModel.js
+│   ├── planteModel.js
+│   └── userModel.js
+├── nodemon.json
+├── package.json
+├── package-lock.json
+├── projet.js
+├── public
+│   ├── favicon.svg
+│   ├── index.html
+│   ├── script.js
+│   └── style.css
+├── README.md
+├── routes
+│   ├── authRoutes.js
+│   ├── orderRoutes.js
+│   └── planteRoutes.js
+├── script.sh
+└── users.txt
+
+7 directories, 26 files
