@@ -33,7 +33,6 @@ function insertOrderItems(orderId, items, callback) {
   }
 
   items.forEach(function(item) {
-    console.log("→ Insertion item:", item);
     const stmt = `
       INSERT INTO order_items (order_id, plante_id, quantite, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?)
@@ -44,21 +43,17 @@ function insertOrderItems(orderId, items, callback) {
       function(err) {
         if (errorOccurred) return;
         if (err) {
-          console.error("✖ Erreur insert item:", item, err);
           errorOccurred = true;
           return callback(err);
         } else {
-          console.log("✔ Item inséré:", item.id, "quantité:", item.quantite);
           decrementPlanteStock(item.id, item.quantite, function(err2) {
             if (errorOccurred) return;
             if (err2) {
-              console.error("✖ Erreur stock plante", item.id, ":", err2);
               errorOccurred = true;
               return callback(err2);
             }
             remaining -= 1;
             if (remaining === 0) {
-              console.log("✔ Tous les items insérés pour commande ID", orderId);
               callback(null, orderId);
             }
           });
@@ -73,14 +68,11 @@ function decrementPlanteStock(planteId, quantite, callback) {
   const stmt = "UPDATE plantes SET stock = stock - ? WHERE id = ?";
   db.run(stmt, [quantite, planteId], function(err) {
     if (err) {
-      console.error("✖ Erreur stock plante id:", planteId, err);
       return callback(err);
     }
     if (this.changes === 0) {
-      console.warn("⚠ Aucun stock modifié pour plante id:", planteId);
       return callback(null); // ou return callback(new Error(...)) si vous voulez bloquer
     }
-    console.log("✔ Stock décrémenté pour plante id:", planteId);
     callback(null);
   });
 }

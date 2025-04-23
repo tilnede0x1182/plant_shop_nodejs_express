@@ -1,3 +1,183 @@
+"+REL_PATH+"
+const model = require("../models/planteModel")
+
+function getAll(req, res) {
+  model.getAll(function(err, plantes) {
+    if (err) return res.status(500).json({ message: "Erreur lecture BDD" })
+    res.json(plantes)
+  })
+}
+
+function getById(req, res) {
+  model.getById(req.params.id, function(err, plante) {
+    if (err) return res.status(500).json({ message: "Erreur BDD" })
+    if (!plante) return res.status(404).json({ message: "Plante non trouvée" })
+    res.json(plante)
+  })
+}
+
+function create(req, res) {
+  const plante = req.body
+
+  if (!plante.nom || !plante.prix || !plante.stock) {
+    return res.status(400).json({ message: "Champs requis manquants." })
+  }
+
+  model.create(plante, function(err, newPlante) {
+    if (err) return res.status(500).json({ message: "Erreur insertion" })
+    res.status(201).json(newPlante)
+  })
+}
+
+function update(req, res) {
+  const plante = req.body
+  model.update(req.params.id, plante, function(err) {
+    if (err) return res.status(500).json({ message: "Erreur modification" })
+    res.json(plante)
+  })
+}
+
+function remove(req, res) {
+  model.remove(req.params.id, function(err) {
+    if (err) return res.status(500).json({ message: "Erreur suppression" })
+    res.status(204).send()
+  })
+}
+
+module.exports = {
+  getAll,
+  getById,
+  create,
+  update,
+  remove
+}
+
+
+"+REL_PATH+"
+const bcrypt = require('bcryptjs')
+const userModel = require("../models/userModel")
+
+// POST /api/register
+function registerUser(req, res) {
+  const { prenom, nom, email, mot_de_passe, adresse, telephone } = req.body
+
+  if (!prenom || !nom || !email || !mot_de_passe) {
+    return res.status(400).json({ error: "Champs requis manquants" })
+  }
+
+  userModel.findByEmail(email, (err, existingUser) => {
+    if (err) return res.status(500).json({ error: "Erreur interne" })
+    if (existingUser) return res.status(400).json({ error: "Email déjà utilisé" })
+
+    bcrypt.hash(mot_de_passe, 10, (err, hash) => {
+      if (err) return res.status(500).json({ error: "Erreur de chiffrement" })
+
+      const utilisateur = {
+        prenom,
+        nom,
+        email,
+        mot_de_passe: hash,
+        adresse: adresse || "",
+        telephone: telephone || "",
+        role: "user",
+        actif: 1,
+        date_inscription: new Date().toISOString()
+      }
+
+      userModel.createUser(utilisateur, (err) => {
+        if (err) return res.status(500).json({ error: "Erreur création compte" })
+        res.status(201).json({ message: "Compte créé" })
+      })
+    })
+  })
+}
+
+// POST /api/login
+function loginUser(req, res) {
+  const { email, mot_de_passe } = req.body
+
+  if (!email || !mot_de_passe) {
+    return res.status(400).json({ error: "Email et mot de passe requis" })
+  }
+
+  userModel.findByEmail(email, (err, user) => {
+    if (err) return res.status(500).json({ error: "Erreur interne" })
+    if (!user) return res.status(404).json({ error: "Utilisateur introuvable" })
+    if (!user.actif) return res.status(403).json({ error: "Compte désactivé" })
+
+    bcrypt.compare(mot_de_passe, user.mot_de_passe, (err, match) => {
+      if (err || !match) return res.status(401).json({ error: "Mot de passe incorrect" })
+
+      // Ne pas renvoyer le mot de passe
+      const { mot_de_passe, ...safeUser } = user
+      res.json({ message: "Connexion réussie", utilisateur: safeUser })
+    })
+  })
+}
+
+module.exports = {
+  registerUser,
+  loginUser
+}
+
+
+"+REL_PATH+"
+const orderModel = require("../models/orderModel");
+const userModel = require("../models/userModel");
+
+function createOrder(req, res) {
+  const { utilisateur, items } = req.body;
+  if (!utilisateur || !items || items.length === 0) {
+    return res.status(400).json({ message: "Données manquantes pour la commande" });
+  }
+  // Calculer le total de la commande
+  const totalPrice = items.reduce((acc, item) => acc + item.prix * (item.quantite || 1), 0);
+  orderModel.createOrder(utilisateur.id, items, totalPrice, "En cours", function(err, orderId) {
+    if (err) {
+      return res.status(500).json({ message: "Erreur lors de la création de la commande", error: err });
+    }
+    res.status(201).json({ message: "Commande créée avec succès", orderId: orderId });
+  });
+}
+
+function listOrders(req, res) {
+  const userId = req.query.userId;
+  const role = req.query.role;
+  if (!userId || !role) {
+    return res.status(401).json({ message: "Utilisateur non connecté" });
+  }
+  const isAdmin = (role === "admin");
+  // Conversion de userId en entier
+  orderModel.getOrdersForUser(parseInt(userId, 10), isAdmin, function(err, orders) {
+    if (err) {
+      console.error("Erreur dans getOrdersForUser :", err);
+      return res.status(500).json({ message: "Erreur lecture commandes", error: err });
+    }
+    res.json(orders);
+  });
+}
+
+function listOrderItems(req, res) {
+  const orderId = req.params.id;
+  if (!orderId) {
+    return res.status(400).json({ message: "Paramètre manquant" });
+  }
+  orderModel.getOrderItems(orderId, function(err, items) {
+    if (err) {
+      return res.status(500).json({ message: "Erreur lecture items", error: err });
+    }
+    res.json(items);
+  });
+}
+
+module.exports = {
+  createOrder,
+  listOrders,
+  listOrderItems
+};
+
+
+"+REL_PATH+"
 // ------------------- Imports et hooks ---------------------
 const { useState, useEffect } = React
 
@@ -988,3 +1168,549 @@ const root = ReactDOM.createRoot(rootContainer)
 window.onpopstate = renderRoute
 window.onload = renderRoute
 window.addEventListener("storage", () => updatePanierCount())
+
+
+"+REL_PATH+"
+// ----------------------------
+// Import des modules
+// ----------------------------
+const express = require("express")
+const path = require("path")
+const planteRoutes = require("./routes/planteRoutes")
+const authRoutes = require("./routes/authRoutes")
+const orderRoutes = require("./routes/orderRoutes")
+
+// ----------------------------
+// Initialisation de l'application
+// ----------------------------
+const app = express()
+const PORT = 3000
+
+// ----------------------------
+// Middleware généraux
+// ----------------------------
+app.use(express.json()) // Pour parser le JSON dans les requêtes
+app.use(express.static(path.join(__dirname, "public"))) // Pour servir les fichiers statiques (frontend)
+
+// ----------------------------
+// Routes API
+// ----------------------------
+app.use("/api/plantes", planteRoutes) // Routes pour la ressource "plantes"
+app.use("/api", authRoutes) // Routes pour l'authentification et les utilisateurs
+app.use("/api/commandes", orderRoutes) // Routes pour les commandes
+
+// ----------------------------
+// Catch-all pour React (SPA)
+// ----------------------------
+// Toutes les autres routes sont redirigées vers l'index.html
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"))
+})
+
+// ----------------------------
+// Démarrage du serveur
+// ----------------------------
+app.listen(PORT, () => {
+  console.log("Serveur lancé sur http://localhost:" + PORT)
+})
+
+
+"+REL_PATH+"
+const sqlite3 = require("sqlite3").verbose()
+const path = require("path")
+
+const dbPath = path.join(__dirname, "../db/plantes.db")
+const db = new sqlite3.Database(dbPath)
+
+function getAll(callback) {
+  db.all("SELECT * FROM plantes", [], function(err, rows) {
+    callback(err, rows)
+  })
+}
+
+function getById(id, callback) {
+  db.get("SELECT * FROM plantes WHERE id = ?", [id], function(err, row) {
+    callback(err, row)
+  })
+}
+
+function create(plante, callback) {
+  const stmt = "INSERT INTO plantes (id, nom, description, prix, categorie, stock) VALUES (?, ?, ?, ?, ?, ?)"
+  const params = [plante.id, plante.nom, plante.description, plante.prix, plante.categorie, plante.stock]
+  db.run(stmt, params, function(err) {
+    callback(err, plante)
+  })
+}
+
+function update(id, plante, callback) {
+  const stmt = "UPDATE plantes SET nom = ?, description = ?, prix = ?, categorie = ?, stock = ? WHERE id = ?"
+  const params = [plante.nom, plante.description, plante.prix, plante.categorie, plante.stock, id]
+  db.run(stmt, params, function(err) {
+    callback(err)
+  })
+}
+
+function remove(id, callback) {
+  db.run("DELETE FROM plantes WHERE id = ?", [id], function(err) {
+    callback(err)
+  })
+}
+
+module.exports = {
+  getAll,
+  getById,
+  create,
+  update,
+  remove
+}
+
+
+"+REL_PATH+"
+const sqlite3 = require("sqlite3").verbose();
+const path = require("path");
+
+const dbPath = path.join(__dirname, "../db/plantes.db");
+const db = new sqlite3.Database(dbPath);
+
+// Création d'une commande
+function createOrder(userId, items, totalPrice, status, callback) {
+  const now = new Date().toISOString();
+  db.run(
+    "INSERT INTO orders (user_id, total_price, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+    [userId, totalPrice, status, now, now],
+    function(err) {
+      if (err) {
+        callback(err);
+      } else {
+        const orderId = this.lastID;
+        // Insertion de chaque item dans order_items
+        insertOrderItems(orderId, items, callback);
+      }
+    }
+  );
+}
+
+// Fonction interne pour insérer les items
+function insertOrderItems(orderId, items, callback) {
+  const now = new Date().toISOString();
+  let remaining = items.length;
+  let errorOccurred = false;
+
+  if (remaining === 0) {
+    return callback(null, orderId);
+  }
+
+  items.forEach(function(item) {
+    const stmt = `
+      INSERT INTO order_items (order_id, plante_id, quantite, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?)
+    `;
+    db.run(
+      stmt,
+      [orderId, item.id, item.quantite, now, now],
+      function(err) {
+        if (errorOccurred) return;
+        if (err) {
+          errorOccurred = true;
+          return callback(err);
+        } else {
+          decrementPlanteStock(item.id, item.quantite, function(err2) {
+            if (errorOccurred) return;
+            if (err2) {
+              errorOccurred = true;
+              return callback(err2);
+            }
+            remaining -= 1;
+            if (remaining === 0) {
+              callback(null, orderId);
+            }
+          });
+        }
+      }
+    );
+  });
+}
+
+// Fonction interne pour décrémenter le stock d’une plante
+function decrementPlanteStock(planteId, quantite, callback) {
+  const stmt = "UPDATE plantes SET stock = stock - ? WHERE id = ?";
+  db.run(stmt, [quantite, planteId], function(err) {
+    if (err) {
+      return callback(err);
+    }
+    if (this.changes === 0) {
+      return callback(null); // ou return callback(new Error(...)) si vous voulez bloquer
+    }
+    callback(null);
+  });
+}
+
+// Récupérer la liste des commandes pour un user donné (ou toutes si admin)
+function getOrdersForUser(userId, isAdmin, callback) {
+  if (isAdmin) {
+    // L’admin voit toutes les commandes
+    db.all("SELECT * FROM orders ORDER BY created_at DESC", [], callback);
+  } else {
+    // Un simple utilisateur ne voit que ses commandes
+    db.all("SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC", [userId], callback);
+  }
+}
+
+// Récupérer les items d’une commande donnée
+function getOrderItems(orderId, callback) {
+  db.all("SELECT * FROM order_items WHERE order_id = ?", [orderId], callback);
+}
+
+module.exports = {
+  createOrder,
+  getOrdersForUser,
+  getOrderItems
+};
+
+
+"+REL_PATH+"
+const sqlite3 = require("sqlite3").verbose()
+const path = require("path")
+
+const dbPath = path.join(__dirname, "../db/plantes.db")
+const db = new sqlite3.Database(dbPath)
+
+function findByEmail(email, callback) {
+  db.get("SELECT * FROM utilisateurs WHERE email = ?", [email], (err, row) => {
+    callback(err, row || null)
+  })
+}
+
+function createUser(data, callback) {
+  const {
+    prenom,
+    nom,
+    email,
+    mot_de_passe,
+    role,
+    adresse,
+    telephone
+  } = data
+
+  const date_inscription = new Date().toISOString()
+  const actif = 1
+
+  db.run(
+    `INSERT INTO utilisateurs
+    (prenom, nom, email, mot_de_passe, role, adresse, telephone, date_inscription, actif)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [prenom, nom, email, mot_de_passe, role, adresse, telephone, date_inscription, actif],
+    (err) => callback(err)
+  )
+}
+
+function findAll(callback) {
+  db.all("SELECT * FROM utilisateurs ORDER BY role ASC, nom ASC, prenom ASC", [], (err, rows) => callback(err, rows))
+}
+
+function update(id, data, callback) {
+  const { prenom, nom, email, adresse, telephone } = data
+  db.run(
+    `UPDATE utilisateurs SET prenom = ?, nom = ?, email = ?, adresse = ?, telephone = ? WHERE id = ?`,
+    [prenom, nom, email, adresse, telephone, id],
+    callback
+  )
+}
+
+function remove(id, callback) {
+  db.run("DELETE FROM utilisateurs WHERE id = ?", [id], (err) => callback(err))
+}
+
+module.exports = {
+  findByEmail,
+  createUser,
+  findAll,
+  remove,
+  update
+}
+
+
+"+REL_PATH+"
+const express = require("express");
+const router = express.Router();
+const orderController = require("../controllers/orderController");
+
+// POST pour créer une commande
+router.post("/", orderController.createOrder);
+
+// GET pour voir la liste des commandes (en passant userId et role en query string)
+router.get("/", orderController.listOrders);
+
+// GET pour voir les items d’une commande donnée
+router.get("/:id/items", orderController.listOrderItems);
+
+module.exports = router;
+
+
+"+REL_PATH+"
+const express = require("express")
+const router = express.Router()
+const authController = require("../controllers/authController")
+const userModel = require("../models/userModel")
+
+router.post("/utilisateurs", authController.registerUser)
+router.post("/login", authController.loginUser)
+router.get("/utilisateurs", (req, res) => {
+  userModel.findAll((err, users) => {
+    if (err) return res.status(500).json({ error: "Erreur lecture utilisateurs" })
+    res.json(users)
+  })
+})
+router.put("/utilisateurs/:id", (req, res) => {
+  const id = req.params.id
+  const { prenom, nom, email, adresse, telephone } = req.body
+
+  const db = require("../models/userModel")
+  db.update(id, { prenom, nom, email, adresse, telephone }, (err) => {
+    if (err) return res.status(500).json({ error: "Erreur mise à jour utilisateur" })
+    res.json({ message: "Mise à jour effectuée" })
+  })
+})
+
+router.delete("/utilisateurs/:id", (req, res) => {
+  userModel.remove(req.params.id, (err) => {
+    if (err) return res.status(500).json({ error: "Erreur suppression" })
+    res.status(204).send()
+  })
+})
+
+module.exports = router
+
+
+"+REL_PATH+"
+const express = require("express")
+const router = express.Router()
+const controller = require("../controllers/planteController")
+
+router.get("/", controller.getAll)
+router.get("/:id", controller.getById)
+router.post("/", controller.create)
+router.put("/:id", controller.update)
+router.delete("/:id", controller.remove)
+
+module.exports = router
+
+
+"+REL_PATH+"
+DROP TABLE IF EXISTS plantes;
+
+CREATE TABLE plantes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nom TEXT NOT NULL,
+  description TEXT,
+  prix INTEGER NOT NULL,
+  categorie TEXT,
+  stock INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS utilisateurs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+	prenom TEXT NOT NULL,
+	nom TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  mot_de_passe TEXT NOT NULL,
+  role TEXT NOT NULL CHECK(role IN ('visiteur', 'user', 'admin')),
+  adresse TEXT,
+  telephone TEXT,
+  date_inscription TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  actif INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  total_price INTEGER NOT NULL,
+  status TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS order_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_id INTEGER NOT NULL,
+  plante_id INTEGER NOT NULL,
+  quantite INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+INSERT INTO plantes (id, nom, description, prix, categorie, stock) VALUES
+('1', 'Ficus', 'Plante verte d’intérieur', 20, 'intérieur', 5);
+
+
+"+REL_PATH+"
+// # Import des dépendances et initialisation
+const fs = require("fs")
+const sqlite3 = require("sqlite3").verbose()
+const { faker } = require("@faker-js/faker")
+const bcrypt = require("bcryptjs")
+const path = require("path")
+
+const db = new sqlite3.Database(path.join(__dirname, "plantes.db"))
+
+// # Constantes globales
+const NB_PLANTES = 30
+const NB_ADMINS = 3
+const NB_USERS = 15
+
+// # Fonctions utilitaires
+function generatePlante() {
+  return {
+    nom: faker.word.words(1),
+    description: faker.lorem.sentence(),
+    prix: faker.number.int({ min: 5, max: 50 }),
+    categorie: faker.helpers.arrayElement(["intérieur", "extérieur"]),
+    stock: faker.number.int({ min: 1, max: 30 })
+  }
+}
+
+// # Fonctions principales
+// ## Insertion d'un utilisateur
+function insertUtilisateur(u) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      "INSERT INTO utilisateurs (prenom, nom, email, mot_de_passe, role, adresse, telephone, date_inscription, actif) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      [
+        u.prenom,
+        u.nom,
+        u.email,
+        u.mot_de_passe,
+        u.role,
+        u.adresse,
+        u.telephone,
+        u.date_inscription,
+        u.actif
+      ],
+      err => (err ? reject(err) : resolve())
+    )
+  })
+}
+
+// ## Insertion d'une plante
+function insertPlante(plante) {
+  return new Promise((resolve, reject) => {
+    const stmt = db.prepare(
+      "INSERT INTO plantes (nom, description, prix, categorie, stock) VALUES (?, ?, ?, ?, ?)"
+    )
+    stmt.run(
+      [plante.nom, plante.description, plante.prix, plante.categorie, plante.stock],
+      err => (err ? reject(err) : resolve())
+    )
+    stmt.finalize()
+  })
+}
+
+// # Main
+async function main() {
+  const utilisateurs = []
+
+  // Nettoyage des tables
+  await new Promise((resolve, reject) => {
+    db.serialize(() => {
+      db.run("DELETE FROM plantes")
+      db.run("DELETE FROM utilisateurs", err => (err ? reject(err) : resolve()))
+    })
+  })
+
+  // Création des utilisateurs (simples et admins)
+  for (let i = 0; i < NB_USERS + NB_ADMINS; i++) {
+    const role = i < NB_USERS ? "user" : "admin"
+    const prenom = faker.person.firstName()
+    const nom = faker.person.lastName()
+    const email = faker.internet.email()
+    const passwordClair = faker.internet.password()
+    const mot_de_passe = await bcrypt.hash(passwordClair, 10)
+    const adresse = faker.location.streetAddress() + ", " + faker.location.city()
+    const telephone = faker.phone.number()
+    const date_inscription = new Date().toISOString()
+    const actif = 1
+
+    const utilisateur = {
+      prenom,
+      nom,
+      email,
+      mot_de_passe,
+      role,
+      adresse,
+      telephone,
+      date_inscription,
+      actif
+    }
+
+    await insertUtilisateur(utilisateur)
+    utilisateurs.push({ role, username: email, password: passwordClair })
+  }
+
+  // Écriture des identifiants dans un fichier
+  let contenu = "Administrateurs :\n\n"
+  contenu += utilisateurs
+    .filter(u => u.role === "admin")
+    .map(u => u.username + " " + u.password)
+    .join("\n")
+
+  contenu += "\n\nUsers :\n\n"
+  contenu += utilisateurs
+    .filter(u => u.role === "user")
+    .map(u => u.username + " " + u.password)
+    .join("\n")
+
+  fs.writeFileSync(path.join(__dirname, "../users.txt"), contenu)
+
+  // Ajout des plantes
+  for (let i = 0; i < NB_PLANTES; i++) {
+    const plante = generatePlante()
+    await insertPlante(plante)
+  }
+
+  console.log("Données initiales générées avec succès.")
+  console.log(NB_PLANTES + " plantes, " + NB_USERS + " users et " + NB_ADMINS + " admins insérés.")
+  db.close()
+}
+
+// Exécution
+main()
+
+
+
+===== STRUCTURE DU PROJET =====
+/home/tilnede0x1182/code/tilnede0x1182/Personnel/2025/Entrainement/Javascript/plant_shop_nodejs_express
+├── app.js
+├── controllers
+│   ├── authController.js
+│   ├── orderController.js
+│   └── planteController.js
+├── data
+│   └── plantes.json
+├── db
+│   ├── init.sql
+│   ├── plantes.db
+│   └── seed.js
+├── dump_projet.sh
+├── models
+│   ├── orderModel.js
+│   ├── planteModel.js
+│   └── userModel.js
+├── nodemon.json
+├── package.json
+├── package-lock.json
+├── projet.js
+├── projet.txt
+├── public
+│   ├── favicon.svg
+│   ├── index.html
+│   ├── script.js
+│   └── style.css
+├── README.md
+├── routes
+│   ├── authRoutes.js
+│   ├── orderRoutes.js
+│   └── planteRoutes.js
+├── script.sh
+└── users.txt
+
+7 directories, 27 files

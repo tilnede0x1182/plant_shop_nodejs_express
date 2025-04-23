@@ -11,7 +11,7 @@ const orderRoutes = require("./routes/orderRoutes")
 // Initialisation de l'application
 // ----------------------------
 const app = express()
-const PORT = 3000
+const PORT = 3001
 
 // ----------------------------
 // Middleware généraux
