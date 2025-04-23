@@ -59,6 +59,27 @@ function insertPlante(plante) {
   })
 }
 
+// Création d'utilisateurs admin fixes
+async function insertFixedAdmins(utilisateurs) {
+  for (let i = 1; i <= 3; i++) {
+    const mot_de_passe = await bcrypt.hash("password", 10)
+    const admin = {
+      prenom: "Admin",
+      nom: "Fixe" + i,
+      email: `admin_0${i}@example.com`,
+      mot_de_passe,
+      role: "admin",
+      adresse: "1 rue des Admins",
+      telephone: "0102030405",
+      date_inscription: new Date().toISOString(),
+      actif: 1
+    }
+    await insertUtilisateur(admin)
+    utilisateurs.push({ role: "admin", username: admin.email, password: "password" })
+  }
+}
+
+
 // # Main
 async function main() {
   const utilisateurs = []
@@ -70,6 +91,9 @@ async function main() {
       db.run("DELETE FROM utilisateurs", err => (err ? reject(err) : resolve()))
     })
   })
+
+  // Création de 3 utilisateurs admin fixes
+  await insertFixedAdmins(utilisateurs)
 
   // Création des utilisateurs (simples et admins)
   for (let i = 0; i < NB_USERS + NB_ADMINS; i++) {
