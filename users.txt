@@ -1,26 +1,26 @@
 Administrateurs :
 
-admin_01@example.com password
-admin_02@example.com password
-admin_03@example.com password
-Austin.Adams@gmail.com k1MHOzpHIQAf8f8
-Bessie63@yahoo.com ZoTle0nMf7PBPy9
-Eulah_Klein@yahoo.com ZQ2oClk5ShyABRe
+admin1@planteshop.com password
+admin2@planteshop.com password
+admin3@planteshop.com password
+Sidney.Cummerata73@hotmail.com 2qAeKk32gBjh4o5
+Janelle.Kunze1@hotmail.com s3ymomF5qawlDCm
+Princess34@gmail.com t03TYhWX9qmt78S
 
 Users :
 
-Mohammed50@gmail.com yE8335WkYyGyFSj
-Geoffrey.Kshlerin29@gmail.com fl3qeGQtRaQEG8y
-Bryana.Ruecker55@gmail.com 8FdzR1ttVpXh3Kx
-Catherine_Goldner37@gmail.com ycOvVKpKYDrf44K
-Erick30@yahoo.com XKhfQq1DgqCyQOP
-Brisa.Kautzer73@yahoo.com gRWrP59UAS1dEjh
-Amanda_Gutkowski@gmail.com 75X9YBd4uPfs_8c
-Mathilde_Schroeder71@yahoo.com yoZzq5dTICEit9w
-Kristy_Heidenreich14@hotmail.com rZ5_1HD0ZdtbSOa
-Gianni_Kilback97@hotmail.com sr1RYOUKyXFDld8
-Guy83@gmail.com qqdr_chVpxRY_pT
-Giovanni_Weimann59@yahoo.com FnE9kkxQjcyNxy1
-Christa.Wehner9@hotmail.com OWbDWpW2EltWHjV
-Alice52@hotmail.com CodCD7WqK4Zajjn
-Jaclyn72@hotmail.com dtY_uaI9SFcw4FZ
+Carleton.Rice@yahoo.com KftOnXdDddx3FE5
+Nakia95@hotmail.com rABZA3AUAcbEIgB
+Sonny.Hermiston@gmail.com OCx4vCOArRt2VMN
+Juana95@yahoo.com SSIStDzJlY1OHTJ
+Loyce_Runte@hotmail.com lCRtJAEvdc1riJs
+Jovan.Gleason36@hotmail.com lTjj_kwLF_q9UFk
+Cordelia_Becker27@hotmail.com FKPp62qXRnPX2pC
+Shaun35@hotmail.com sz5DCcQRXZ_yxd9
+Freddie28@yahoo.com U_t3c__kET8_4iY
+Arne.Stiedemann@yahoo.com CEuoyLN2AgpBrd4
+Clovis.Ledner31@gmail.com aoG1St7OGT4bwoR
+Kelli.Marvin@gmail.com N7FIWwtCeB8ufcM
+Fredy72@gmail.com w8sw2IyXqLwSMws
+Geovanni_Rau62@gmail.com b3spP0Dq14EB_45
+Ona.Littel38@yahoo.com MeZ1ybqvUeHLCJ7

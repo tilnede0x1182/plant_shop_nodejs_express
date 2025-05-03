@@ -66,7 +66,7 @@ async function insertFixedAdmins(utilisateurs) {
     const admin = {
       prenom: "Admin",
       nom: "Fixe" + i,
-      email: `admin_0${i}@example.com`,
+      email: `admin${i}@planteshop.com`,
       mot_de_passe,
       role: "admin",
       adresse: "1 rue des Admins",
