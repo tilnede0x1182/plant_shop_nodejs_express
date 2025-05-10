@@ -16,3 +16,5 @@ logs/
 # Fichiers système
 .DS_Store
 Thumbs.db
+projet.txt
+script.sh
